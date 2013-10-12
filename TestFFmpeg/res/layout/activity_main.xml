@@ -15,12 +15,33 @@
         android:gravity="center"
         android:text="" />
     
-    
     <Button 
         android:id="@+id/btnGetVersion"
         android:layout_below="@id/TestVersion"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="获取FFMPEG版本号"/>
+    
+    <EditText
+        android:id="@+id/EdtRTSPURL"
+        android:layout_below="@id/btnGetVersion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textWebEditText"
+        android:text="rtsp://192.168.1.103/test.264"/>
+    
+    <Button 
+        android:id="@+id/btnStartPlay"
+        android:layout_below="@id/EdtRTSPURL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Play"/>
+    
+     <Button 
+        android:id="@+id/btnStopPlay"
+        android:layout_below="@id/btnStartPlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stop Play"/>
     	
 </RelativeLayout>

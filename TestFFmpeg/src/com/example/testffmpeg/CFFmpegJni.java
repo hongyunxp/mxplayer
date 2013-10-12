@@ -1,6 +1,6 @@
 package com.example.testffmpeg;
 
-public class FFmpegJni {
+public class CFFmpegJni {
 	
 	/***
 	 * ªÒ»°∞Ê±æ∫≈
