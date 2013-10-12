@@ -1,6 +1,7 @@
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include "CRGB2BMP.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,8 @@ extern "C" {
 #define FFMPEG_TAG "FFMpegAndroid"
 
 #define MYLOG_TAG "TestNDK_DEBUG"
+
+#define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
 
 /// 定义全局变量
 AVFormatContext* m_pFormatCtx = NULL;
@@ -65,88 +68,48 @@ static void e_PrintFFmpeg(void* ptr, int level, const char* fmt, va_list vl)
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, MYLOG_TAG, __VA_ARGS__)
 
 
-void SaveFrame(AVFrame* pFrame, int width, int height, int iFrame)
+void e_SaveFrame(AVFrame* pFrameRGB, int nWidth, int nHeight)
 {
-    FILE *pFile;
-    char szFilename[32];
-    int  y;
+	int w = nWidth;
+	int h = nHeight;
+	int nBufferLen = WIDTHBYTES(w * 24) * h;
+	BYTE* pBuffer = new BYTE[nBufferLen];
+	memset(pBuffer, 0 , nBufferLen);
 
-	/////////////////////
-	BITMAPFILEHEADER m_fileHeader;
-	BITMAPINFOHEADER m_infoHeader;
-	unsigned int uiTmp, uiTmp2;
-	unsigned char *ucTmp = NULL;
-	unsigned char ucRGB;
-	int i;
-
-	uiTmp = (width*3+3)/4*4*height;
-	uiTmp2 = width*height*3;
-
-
-	//文件标识"BM"（即0x4D42）表示位图
-	m_fileHeader.bfType = 0x4D42;
-	//整个文件的大小（单位：字节）
-	m_fileHeader.bfSize = sizeof(m_fileHeader) + sizeof(m_infoHeader) + uiTmp;
-	//保留。设置为0
-	m_fileHeader.bfReserved1 = 0;
-	//保留。设置为0
-	m_fileHeader.bfReserved2 = 0;
-	//从文件开始到位图数据的偏移量（单位：字节）
-	m_fileHeader.bfOffBits = sizeof(m_fileHeader) + sizeof(m_infoHeader);
-
-	//信息头长度（单位：字节）。典型值为28
-	m_infoHeader.biSize = 0x28;
-	//位图宽度（单位：像素）
-	m_infoHeader.biWidth = width;
-	//位图高度（单位：像素）。若其为正，表示倒向的位图。若为负，表示正向的位图
-	m_infoHeader.biHeight = height;
-	//位图的面数（为1）
-	m_infoHeader.biPlanes = 1;
-	//每个像素的位数
-	m_infoHeader.biBitCount = 24;
-	//压缩说明。0(BI_RGB)表示不压缩
-	m_infoHeader.biCompression = 0;
-	//用字节数表示的位图数据的大小（为4的位数）
-	m_infoHeader.biSizeImage = uiTmp;
-	//水平分辨率（单位：像素/米）
-	m_infoHeader.biXPelsPerMeter = 0;
-	//垂直分辨率（单位：像素/米）
-	m_infoHeader.biYPelsPerMeter = 0;
-	//位图使用的颜色数
-	m_infoHeader.biClrUsed = 0;
-	//重要的颜色数
-	m_infoHeader.biClrImportant = 0;
-	/////////////////////
-
-    // Open file
-	sprintf(szFilename, "frame%d.bmp", iFrame);
-    pFile=fopen(szFilename, "wb");
-    if(pFile==NULL)
-        return;
-    // Write header
-	fprintf(pFile, "P6\n%d %d\n255\n", width, height);
-    // Write pixel data
-	fwrite(&m_fileHeader, sizeof(m_fileHeader), 1, pFile);
-	fwrite(&m_infoHeader, sizeof(m_infoHeader), 1, pFile);
-    for(y=height-1; y>=0; y--)
-    {
-		if(ucTmp != NULL) {
-			delete []ucTmp;
-			ucTmp = NULL;
-		}
-		ucTmp = new unsigned char[width*3];
-		memcpy(ucTmp, pFrame->data[0]+y*pFrame->linesize[0], width*3);
-		for(i = 0; i < width; i++) {
-			ucRGB = ucTmp[3*i];
-			ucTmp[3*i] = ucTmp[3*i+2];
-			ucTmp[3*i+2] = ucRGB;
-		}
-		ucRGB = 0;
-        fwrite(ucTmp, 1, width*3, pFile);
-		fwrite(&ucRGB, 1, (uiTmp-uiTmp2)/height , pFile);
+	for (int i = 0; i < h; i++)
+	{
+		//将图像转为bmp存到内存中, 这里的图像是倒立的
+		memcpy(pBuffer + (WIDTHBYTES(w * 24) * i), pFrameRGB->data[0] + i * pFrameRGB->linesize[0], w * 3);
 	}
-    // Close file
-    // fclose(pFile);
+
+	BYTE* pBMPData = new BYTE[sizeof(BmpHead) + sizeof(InfoHead) + nBufferLen];
+
+    BmpHead m_BMPHeader;
+    m_BMPHeader.bfType = 'BM';
+    m_BMPHeader.imageSize = 3 * nWidth*nHeight + sizeof(BmpHead) + sizeof(InfoHead);
+    m_BMPHeader.blank = 0;
+    m_BMPHeader.startPosition=sizeof(BmpHead) + sizeof(InfoHead);
+    memcpy(pBMPData, &m_BMPHeader, sizeof(BmpHead));
+
+    InfoHead  m_BMPInfoHeader;
+    m_BMPInfoHeader.Length=40;
+    m_BMPInfoHeader.width= nWidth;
+    //注意，这里的bmpinfo.bmiHeader.biHeight变量的正负决定bmp文件的存储方式，如果为负值，表示像素是倒过来的*/
+    m_BMPInfoHeader.height= -nHeight;
+    m_BMPInfoHeader.colorPlane = 1;
+    m_BMPInfoHeader.bitColor=24;
+    m_BMPInfoHeader.zipFormat=0;
+    m_BMPInfoHeader.realSize=3 * nWidth * nHeight;
+    m_BMPInfoHeader.xPels=0;
+    m_BMPInfoHeader.yPels=0;
+    m_BMPInfoHeader.colorUse=0;
+    m_BMPInfoHeader.colorImportant=0;
+    memcpy(pBMPData+sizeof(BmpHead),&m_BMPInfoHeader,sizeof(InfoHead));
+    memcpy(pBMPData+sizeof(BmpHead)+sizeof(InfoHead), pBuffer, nBufferLen);
+
+    /// 释放数据缓冲
+	delete [] pBuffer; pBuffer = NULL;
+	delete [] pBMPData; pBMPData = NULL;
 }
 
 /*
@@ -263,7 +226,7 @@ jint Java_com_example_testffmpeg_FFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			return -1;
 		}
 
-		AVFrame	*pFrame,*pFrameYUV;
+		AVFrame	*pFrame = NULL, *pFrameYUV = NULL, *pFrameRGB = NULL;
 		pFrame = avcodec_alloc_frame();
 		pFrameYUV = avcodec_alloc_frame();
 		uint8_t *out_buffer = NULL;
@@ -288,30 +251,39 @@ jint Java_com_example_testffmpeg_FFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 				if(0 < nCodecRet)
 				{
 					/// 格式化像素为YUV格式
-					img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width,
+					/*img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width,
 							pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 					sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize,
-							0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
+							0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);*/
+
+					/// 格式化像素格式为BMP
+					img_convert_ctx = sws_getContext(	pCodecCtx->width,
+							pCodecCtx->height,
+							pCodecCtx->pix_fmt,
+							pCodecCtx->width,
+							pCodecCtx->height,
+							PIX_FMT_RGB32,
+							SWS_BICUBIC,
+							NULL, NULL, NULL);
+					if(NULL == img_convert_ctx)
+					{
+						LOGD("could not initialize conversion context.");
+					}
+
+					/// 转换格式为RGB
+					sws_scale(img_convert_ctx,
+							(const uint8_t* const*)pFrame->data,
+							pFrame->linesize,
+							0,
+							pCodecCtx->height,
+							pFrameRGB->data,
+							pFrameRGB->linesize);
+
+					/// 释放个格式化信息
+					sws_freeContext(img_convert_ctx);
 
 
-					/*img_convert_ctx = sws_getContext(	pAVCodecCtx->width,
-														pAVCodecCtx->height,
-														pAVCodecCtx->pix_fmt,
-														pAVCodecCtx->width,
-														pAVCodecCtx->height,
-														PIX_FMT_RGB24,
-														SWS_BICUBIC,
-														NULL, NULL, NULL);
-					if(img_convert_ctx == NULL)
-						LOGE("could not initialize conversion context\n");
-
-					sws_scale(	img_convert_ctx,
-								(const uint8_t* const*)pAVFrame->data,
-								pAVFrame->linesize,
-								0,
-								pAVCodecCtx->height,
-								pAVFrameRGB->data,
-								pAVFrameRGB->linesize);*/
+					e_SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
 				}
 				else
 				{
