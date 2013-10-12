@@ -1,0 +1,73 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/TextFileName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/fileName" />
+    
+    <!-- android:text="test.mp4" -->
+    <!-- android:text="http://192.168.1.103/test.mp4" -->
+    <EditText
+        android:id="@+id/EditFileName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:layout_below="@id/TextFileName"        
+        android:text="test.mp4"
+        />
+    
+   	<Button    
+   	    android:id="@+id/BtnStart"
+   	    android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+   	    android:layout_alignLeft="@+id/EditFileName"
+   	    android:layout_below="@id/EditFileName"
+   	    android:text="@string/Bstart"
+   	    android:onClick="MediaOption"/>
+   	
+   	<Button
+   	    android:id="@+id/BtnPause"
+   	    android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/BtnStart"
+   	    android:layout_toRightOf="@+id/BtnStart"
+   	    android:text="@string/Bpause"
+   	    android:onClick="MediaOption"/>
+   	
+   	<Button
+   	    android:id="@+id/BtnRePlay"
+   	    android:layout_width="wrap_content"
+   	    android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/BtnPause"
+   	    android:layout_toRightOf="@+id/BtnPause"
+   	    android:text="@string/BrePlay"
+   	    android:onClick="MediaOption"/>
+   	
+   	<Button
+   	    android:id="@+id/BtnStop"
+   	    android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/BtnRePlay"
+   	    android:layout_toRightOf="@+id/BtnRePlay"
+   	    android:layout_alignRight="@+id/EditFileName"
+   	    android:text="@string/Bstop"
+   	    android:onClick="MediaOption"/>
+   	
+   	<SurfaceView 
+   	    android:id="@+id/SFVideo"
+   	    android:layout_width="match_parent"
+        android:layout_height="120dp"
+   	    android:layout_below="@id/BtnStart"
+   	    android:layout_alignRight="@id/BtnStop"
+   	    />
+
+</RelativeLayout>
