@@ -24,6 +24,8 @@ public class MainActivity extends Activity {
 	
 	private int m_nScale = 0;
 	
+	public CFFmpegJni m_FFmpegJni = null;
+	
 	/// 加载要调用的动态库
 	static 
 	{
@@ -31,16 +33,17 @@ public class MainActivity extends Activity {
 		System.loadLibrary("FFmpegJni");
 	}
 	
-	public CFFmpegJni m_FFmpegJni = null;
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		/// 实例化FFmpegJni解码器
-		m_FFmpegJni = new CFFmpegJni();
-		/// 实例化媒体处理对象
-		m_MediaProcess = new CMediaProcess(m_FFmpegJni);
+		m_FFmpegJni = new CFFmpegJni();		
+		if(null != m_FFmpegJni)
+		{
+			/// 实例化媒体处理对象
+			m_MediaProcess = new CMediaProcess(m_FFmpegJni);
+		}
 		/// 获取视图对象
 		textVersion = (TextView)findViewById(R.id.TestVersion);
 		btnGetVersion = (Button)findViewById(R.id.btnGetVersion);

@@ -18,7 +18,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 #加入此标志，是因为FFmpeg是gcc 编译的 NDK 编译要连接的库是使用 g++ 编译的CPP文件，
 #有可能出现‘UINT64_C’ was not declared in this scope的错误，为避免此错误加入此标志
-LOCAL_CFLAGS += -D__STDC_CONSTANT_MACROS=1
+#LOCAL_CFLAGS += -D__STDC_CONSTANT_MACROS=1
 
 # 加入此头文件目录，主要考虑 ffmpeg 内部头文件的引用位置
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/ffmpeg
@@ -33,7 +33,7 @@ LOCAL_LDLIBS 	+= -L$(LOCAL_PATH) -lffmpeg -llog
 LOCAL_MODULE    := FFmpegJni
 
 # 要编译的源文件
-LOCAL_SRC_FILES := FFmpegJni.cpp
+LOCAL_SRC_FILES := CFFmpegJni.cpp
 
 # 编译类型 [动态 、 静态]
 include $(BUILD_SHARED_LIBRARY)

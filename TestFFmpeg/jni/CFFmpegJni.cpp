@@ -6,7 +6,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#ifndef INT64_C
+#define INT64_C(c) (c ## LL)
+#define UINT64_C(c) (c ## ULL)
+#endif
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
@@ -16,7 +19,7 @@ extern "C" {
 }
 #endif// end of extern C
 
-#include "FFmpegJni.h"
+#include "CFFmpegJni.h"
 
 #include <android/log.h>
 
@@ -32,6 +35,9 @@ AVDictionary* m_pDOptions = NULL;
 
 char m_szURLPath[512];
 int m_nWith = 0;
+
+jclass		m_CallBackClass = NULL;
+jmethodID 	m_CallBackQueueMethod = NULL;
 
 /// 定义日志回调函数
 static void e_PrintFFmpeg(void* ptr, int level, const char* fmt, va_list vl)
@@ -94,7 +100,7 @@ void e_SaveFrame(AVFrame* pFrameRGB, int nWidth, int nHeight)
     InfoHead  m_BMPInfoHeader;
     m_BMPInfoHeader.Length=40;
     m_BMPInfoHeader.width= nWidth;
-    //注意，这里的bmpinfo.bmiHeader.biHeight变量的正负决定bmp文件的存储方式，如果为负值，表示像素是倒过来的*/
+    //注意，这里的bmpinfo.bmiHeader.biHeight变量的正负决定bmp文件的存储方式，如果为负值，表示像素是倒过来的
     m_BMPInfoHeader.height= -nHeight;
     m_BMPInfoHeader.colorPlane = 1;
     m_BMPInfoHeader.bitColor=24;
@@ -112,12 +118,34 @@ void e_SaveFrame(AVFrame* pFrameRGB, int nWidth, int nHeight)
 	delete [] pBMPData; pBMPData = NULL;
 }
 
+//---------------------------------------------------------------
+
+void e_DisplayCallBack(JNIEnv *env, char* pszBuffer, int nSize)
+{
+	/// (env)->CallStaticVoidMethod(env, gJniClass,gJinMethod,(*env)->NewStringUTF(env, tChars));
+	m_CallBackClass = env->FindClass("com/example/testffmpeg/CVideoFrames");
+	if(NULL != m_CallBackClass)
+	{
+		/// 再找类中的静态方法
+		m_CallBackQueueMethod = env->GetStaticMethodID(m_CallBackClass, "e_AddDataToQueue", "([B)V");
+		if(NULL != m_CallBackQueueMethod)
+		{
+		 	/// 构造数组
+		 	jbyteArray bytecarr = env->NewByteArray(nSize);
+		     /// 拷贝数据
+		 	env->SetByteArrayRegion(bytecarr, 0, nSize, (jbyte*)pszBuffer);
+		 	//回调java中的方法
+		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , bytecarr);
+		}
+	}
+}
+
 /*
- * Class:     com_example_testffmpeg_FFmpegJni
+ * Class:     com_example_testffmpeg_CFFmpegJni
  * Method:    IGetVersion
  * Signature: ()I
  */
-jint Java_com_example_testffmpeg_FFmpegJni_IGetVersion(JNIEnv *env, jobject thiz)
+jint Java_com_example_testffmpeg_CFFmpegJni_IGetVersion(JNIEnv *env, jobject thiz)
 {
 	/// 设置日志信息回调
 	av_log_set_callback(e_PrintFFmpeg);
@@ -126,19 +154,43 @@ jint Java_com_example_testffmpeg_FFmpegJni_IGetVersion(JNIEnv *env, jobject thiz
 	LOGD("Set FFMpeg Log Call Back Success. ");
 
 	/// 获取版本信息测试使用
-	int nRet = avcodec_version();
+	int nRet = 0;
+	nRet = avcodec_version();
+
+	/// 如果回调函数没有设置，那么获取回调函数
+	/*if(NULL == m_CallBackQueueMethod)
+	{
+	    //找到java中的类
+		m_CallBackClass = env->FindClass("com/example/testffmpeg/CVideoFrames");
+		if(NULL != m_CallBackClass)
+		{
+			/// 再找类中的静态方法
+			m_CallBackQueueMethod = env->GetStaticMethodID(m_CallBackClass, "e_AddDataToQueue", "([B)V");
+		}
+	    if(m_CallBackQueueMethod == NULL)
+	    {
+	        LOGD("Get CallBack Function Fail.");
+	        return 0;
+	    }
+	}*/
+
+	/// 测试回调
+	char szTemp[128];
+	strcpy(szTemp, "哈哈, 这是回调消息");
+	e_DisplayCallBack(env, szTemp, strlen(szTemp));
 
 	return nRet;
 }
 
 /*
- * Class:     com_example_testffmpeg_FFmpegJni
+ * Class:     com_example_testffmpeg_CFFmpegJni
  * Method:    IInit
  * Signature: (Ljava/lang/String;IIII)I
  */
-jint Java_com_example_testffmpeg_FFmpegJni_IInit(JNIEnv *env, jobject thiz, jstring jstrRTSPUrl,
+jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jstring jstrRTSPUrl,
 		jint jnMeidaType, jint jnSawle, jint jnWith, jint jnHeight)
 {
+	int nRet = 0;
 	/// 注册解码器
 	avcodec_register_all();
 
@@ -157,26 +209,26 @@ jint Java_com_example_testffmpeg_FFmpegJni_IInit(JNIEnv *env, jobject thiz, jstr
 		av_dict_set(&m_pDOptions, "rtsp_transport", "tcp", 0);
 	}
 	/// 初始化网络
-	int nRet = avformat_network_init();
+	nRet = avformat_network_init();
 	return nRet;
 }
 
 /*
- * Class:     com_example_testffmpeg_FFmpegJni
+ * Class:     com_example_testffmpeg_CFFmpegJni
  * Method:    IResize
  * Signature: (II)V
  */
-void Java_com_example_testffmpeg_FFmpegJni_IResize(JNIEnv *env, jobject thiz, jint jnWith, jint jnHeight)
+void Java_com_example_testffmpeg_CFFmpegJni_IResize(JNIEnv *env, jobject thiz, jint jnWith, jint jnHeight)
 {
 
 }
 
 /*
- * Class:     com_example_testffmpeg_FFmpegJni
+ * Class:     com_example_testffmpeg_CFFmpegJni
  * Method:    IPlay
  * Signature: ()I
  */
-jint Java_com_example_testffmpeg_FFmpegJni_IPlay(JNIEnv *env, jobject thiz)
+jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 {
 	/// 定义返回值
 	int nRet = -1;
@@ -242,7 +294,6 @@ jint Java_com_example_testffmpeg_FFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 		/// 输出一下信息-----------------------------
 		LOGD("文件信息-----------------------------------------");
 		av_dump_format(m_pFormatCtx, 0, m_szURLPath, 0);
-
 		while(av_read_frame(m_pFormatCtx, packet)>=0)
 		{
 			if(nVideoIndex == packet->stream_index)
@@ -297,11 +348,11 @@ jint Java_com_example_testffmpeg_FFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 }
 
 /*
- * Class:     com_example_testffmpeg_FFmpegJni
+ * Class:     com_example_testffmpeg_CFFmpegJni
  * Method:    IStop
  * Signature: ()I
  */
-jint Java_com_example_testffmpeg_FFmpegJni_IStop(JNIEnv *env, jobject thiz)
+jint Java_com_example_testffmpeg_CFFmpegJni_IStop(JNIEnv *env, jobject thiz)
 {
 	/// 关闭打开的文件
 	avformat_close_input(&m_pFormatCtx);
