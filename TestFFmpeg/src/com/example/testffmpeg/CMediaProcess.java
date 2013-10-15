@@ -1,6 +1,8 @@
 package com.example.testffmpeg;
 
-public class CMediaProcess extends Thread {
+import android.util.Log;
+
+public class CMediaProcess extends Thread{
 	
 	/// 定义常量网络类型
 	public static final int Net_UDP_Type = 0;
@@ -43,10 +45,17 @@ public class CMediaProcess extends Thread {
 			/// 调用Jni停止播放视频
 			m_FFMpegJni.IStop();
 			/// 赋值播放状态为：未播放状态
-			m_bIsPlaying = false;			
+			m_bIsPlaying = false;
 			/// 播放线程如果在播放过程中，停止线程运行
 			if(this.isAlive())
 			{
+//				try {
+//					Thread.sleep(100);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+				Log.d("Thread Test", "T Alive --------------------");
 				this.interrupt();
 			}			
 			/// 清空数据帧队列
@@ -57,7 +66,28 @@ public class CMediaProcess extends Thread {
 	@Override
 	public void run()
 	{
+		Log.d("Thread Test", "T Start--------------------");
 		/// 开始播放
 		m_FFMpegJni.IPlay();
+		
+		/*while(true == m_bIsPlaying)
+		{
+			try
+			{
+				Thread.sleep(1000);
+			}
+			catch (InterruptedException e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Log.d("Thread Test", "T Runing --------------------");
+		}*/
+		
+		Log.d("Thread Test", "T Stop--------------------");
+		
+		/// m_bIsPlaying = false;
 	}
+	
+	
 }

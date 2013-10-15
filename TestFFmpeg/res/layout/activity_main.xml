@@ -28,7 +28,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textWebEditText"
-        android:text="rtsp://192.168.1.103/test.264"/>
+        android:text="rtsp://192.168.1.103/123.264"/>
     
     <Button 
         android:id="@+id/btnStartPlay"
