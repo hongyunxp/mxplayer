@@ -95,9 +95,7 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 		 	jbyteArray byteArray = env->NewByteArray(nSize);
 		    /// 拷贝数据
 		 	env->SetByteArrayRegion(byteArray, 0, nSize, (jbyte* )pszBuffer);
-
 		 	LOGD("Call BACK Data1..................");
-
 		 	//回调java中的方法
 		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , byteArray);
 		 	/// 释放本地数组引用
@@ -113,7 +111,7 @@ void e_SaveFrame(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 	int nWidthBytes = nWidth * 4;/// WIDTHBYTES(nWidth * 24);
 	int nBufferLen =  nWidthBytes * nHeight;
 
-	LOGD("%s, DateLen = %d", " SaveFrame 0--------------->", nBufferLen);
+	LOGD("%s, DateLen = %d", "SaveFrame 0--------------->", nBufferLen);
 	int nBMPHeadLen = sizeof(BmpHead) + sizeof(InfoHead);
 	int nBMPBufferLen = nBMPHeadLen + nBufferLen;
 	BYTE* pBMPData = new BYTE[nBMPBufferLen];
@@ -202,9 +200,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jst
 {
 	int nRet = 0;
 	/// 注册解码器
-	avcodec_register_all();
-	/// 注册解码器
 	av_register_all();
+	/// 注册解码器
+	avcodec_register_all();
 	/// 获取RTSP路径
 	const char* pstrRTSPUrl = (env)->GetStringUTFChars(jstrRTSPUrl, 0);
 	/// 赋值RTSP网络地址
@@ -265,7 +263,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 
 	// m_pFormatCtx->max_analyze_duration = 1000;
 	// m_pFormatCtx->probesize = 2048;
-	if(0 > avformat_find_stream_info(m_pFormatCtx, &m_pDictOptions))
+	if(0 > avformat_find_stream_info(m_pFormatCtx, NULL))
 	{
 		LOGD("Couldn't find stream information.");
 		return -1;
@@ -336,8 +334,8 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			nCodecRet = avcodec_decode_video2(pCodecCtx, pFrame, &nHasGetPicture, pAVPacket);
 			if(0 < nHasGetPicture)
 			{
-				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d ", nDecodeNum++, pCodecCtx->width,
-						pCodecCtx->height, pFrame->coded_picture_number);
+				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d nCodecRet=%d...", nDecodeNum++, pCodecCtx->width,
+						pCodecCtx->height, pFrame->coded_picture_number, nCodecRet);
 				/// 格式化像素格式为RGB
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
 					pCodecCtx->width, pCodecCtx->height, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
@@ -360,7 +358,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	/// 释放数据帧对象指针
 	av_free(pFrame); pFrame = NULL;
 	av_free(pFrameRGB); pFrameRGB = NULL;
-
+	/// 释放解码信息对象
 	avcodec_close(pCodecCtx); pCodecCtx = NULL;
 	avformat_close_input(&m_pFormatCtx);
 	/// 释放数据

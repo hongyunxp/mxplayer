@@ -49,12 +49,6 @@ public class CMediaProcess extends Thread{
 			/// 播放线程如果在播放过程中，停止线程运行
 			if(this.isAlive())
 			{
-//				try {
-//					Thread.sleep(100);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
 				Log.d("Thread Test", "T Alive --------------------");
 				this.interrupt();
 			}			
@@ -66,28 +60,8 @@ public class CMediaProcess extends Thread{
 	@Override
 	public void run()
 	{
-		Log.d("Thread Test", "T Start--------------------");
 		/// 开始播放
 		m_FFMpegJni.IPlay();
-		
-		/*while(true == m_bIsPlaying)
-		{
-			try
-			{
-				Thread.sleep(1000);
-			}
-			catch (InterruptedException e) 
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			Log.d("Thread Test", "T Runing --------------------");
-		}*/
-		
-		Log.d("Thread Test", "T Stop--------------------");
-		
-		/// m_bIsPlaying = false;
+		m_bIsPlaying = false;
 	}
-	
-	
 }
