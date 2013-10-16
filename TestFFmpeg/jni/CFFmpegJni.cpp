@@ -334,8 +334,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			nCodecRet = avcodec_decode_video2(pCodecCtx, pFrame, &nHasGetPicture, pAVPacket);
 			if(0 < nHasGetPicture)
 			{
-				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d nCodecRet=%d...", nDecodeNum++, pCodecCtx->width,
-						pCodecCtx->height, pFrame->coded_picture_number, nCodecRet);
+				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d nCodecRet=%d, pAVPacket Size = %d...",
+						nDecodeNum++, pCodecCtx->width, pCodecCtx->height,
+						pFrame->coded_picture_number, nCodecRet, pAVPacket->size);
 				/// 格式化像素格式为RGB
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
 					pCodecCtx->width, pCodecCtx->height, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
@@ -347,6 +348,14 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 				/// 显示或者保存数据
 				e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
 			}
+			else
+			{
+				LOGD("nCodecRet = %d, pAVPacket Size = %d, Decode Packet Error...", nCodecRet, pAVPacket->size);
+			}
+		}
+		else
+		{
+			LOGD("stream_index = %d, The Frame Is Not Video Frame, May be It's Audio Frame ?...", pAVPacket->stream_index);
 		}
 		/// 释放解码包，此数据包，在 av_read_frame 调用是被创建
 		av_free_packet(pAVPacket);
