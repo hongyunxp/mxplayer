@@ -16,14 +16,11 @@ public class CVideoFrames {
 	public static void e_AddDataToQueue(byte[] pBufferData)
 	{
 		if(null != pBufferData)
-		{
-			/// byte[] btBuffData = new byte[pBufferData.length];
-			
-			/// btBuffData = pBufferData;
-			
-			/// m_FrameDatas.add(pBufferData);
+		{			
+			m_FrameDatas.add(pBufferData);
 			/// ¥Ú”°»’÷æ
-			Log.d("e_AddDataToQueue", "Data Input To Queue Success! BufferSize = " + pBufferData.length + " FramQueue Size = " + m_FrameDatas.size());
+			Log.d("e_AddDataToQueue", "Data Input To Queue Success! BufferSize = " + 
+					pBufferData.length + " FramQueue Size = " + m_FrameDatas.size());
 		}
 	}
 }

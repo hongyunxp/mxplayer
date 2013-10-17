@@ -5,15 +5,21 @@
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".MainActivity" >
+    android:paddingTop="@dimen/activity_vertical_margin">
+    <!-- tools:context=".MainActivity" --> 
+    
+    <view class="com.example.testffmpeg.CVideoView"
+		android:id="@+id/ConstonVideoView"
+		android:layout_width="fill_parent" 
+	   	android:layout_height="288dp" 
+	    tools:context=".MainActivity" />
 
     <TextView
         android:id="@+id/TestVersion"
+        android:layout_below="@id/ConstonVideoView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="" />
+        android:gravity="center"/>
     
     <Button 
         android:id="@+id/btnGetVersion"

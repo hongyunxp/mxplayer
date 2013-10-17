@@ -2,16 +2,17 @@ package com.example.testffmpeg;
 
 import android.util.Log;
 
-public class CMediaProcess extends Thread{
+public class CMediaProcess implements Runnable{
 	
 	/// 定义常量网络类型
 	public static final int Net_UDP_Type = 0;
-	public static final int Net_TCP_Type = 1;
-	
+	public static final int Net_TCP_Type = 1;	
 	/// 定义要获取的获取FFmpeg操作对象
 	private CFFmpegJni m_FFMpegJni = null;
 	/// 定义播放状态
 	private boolean m_bIsPlaying = false;
+	/// 定义解码线程对象
+	private Thread m_DecoderTread = null;
 	
 	public CMediaProcess(CFFmpegJni FFmpegJni)
 	{
@@ -19,10 +20,10 @@ public class CMediaProcess extends Thread{
 		m_FFMpegJni = FFmpegJni;
 	}
 	
-	public int e_Init(String strRTSPUrl, int nMediaType, int nScale, int nWidth, int nHeight)
+	public int e_Init(String strRTSPUrl, int nMediaType)
 	{
 		/// 初始化媒体对象
-		return m_FFMpegJni.IInit(strRTSPUrl, nMediaType, nScale, nWidth, nHeight);
+		return m_FFMpegJni.IInit(strRTSPUrl, nMediaType);
 	}
 
 	public void e_Start()
@@ -33,7 +34,8 @@ public class CMediaProcess extends Thread{
 			/// 赋值正在播放状态
 			this.m_bIsPlaying = true;
 			/// 播放线程启动
-			this.start();
+			m_DecoderTread = new Thread(this);			
+			m_DecoderTread.start();
 		}
 	}
 	
@@ -47,10 +49,10 @@ public class CMediaProcess extends Thread{
 			/// 赋值播放状态为：未播放状态
 			m_bIsPlaying = false;
 			/// 播放线程如果在播放过程中，停止线程运行
-			if(this.isAlive())
+			if(null != m_DecoderTread && m_DecoderTread.isAlive())
 			{
 				Log.d("Thread Test", "T Alive --------------------");
-				this.interrupt();
+				m_DecoderTread.interrupt();
 			}			
 			/// 清空数据帧队列
 			CVideoFrames.m_FrameDatas.clear();

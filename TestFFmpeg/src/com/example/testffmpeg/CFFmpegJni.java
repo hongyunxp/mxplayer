@@ -17,7 +17,7 @@ public class CFFmpegJni {
 	 * @param nHeight
 	 * @return
 	 */
-	public native int IInit(String strRTSPUrl, int nMediaType, int nScale, int nWidth, int nHeight);
+	public native int IInit(String strRTSPUrl, int nMediaType);
 
 	/***
 	 * 重设解码大小

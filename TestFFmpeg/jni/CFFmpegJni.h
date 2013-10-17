@@ -21,7 +21,7 @@ JNIEXPORT jint JNICALL Java_com_example_testffmpeg_CFFmpegJni_IGetVersion
  * Signature: (Ljava/lang/String;IIII)I
  */
 JNIEXPORT jint JNICALL Java_com_example_testffmpeg_CFFmpegJni_IInit
-  (JNIEnv *, jobject, jstring, jint, jint, jint, jint);
+  (JNIEnv *, jobject, jstring, jint);
 
 /*
  * Class:     com_example_testffmpeg_CFFmpegJni

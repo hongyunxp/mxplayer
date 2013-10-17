@@ -38,7 +38,6 @@ bool m_bIsPlaying = false;
 int nDecodeNum = 0;
 
 char m_szURLPath[512];
-int m_nWith = 0;
 
 static jclass		m_CallBackClass = NULL;
 static jmethodID 	m_CallBackQueueMethod = NULL;
@@ -90,22 +89,19 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 		m_CallBackQueueMethod = env->GetStaticMethodID(m_CallBackClass, "e_AddDataToQueue", "([B)V");
 		if(NULL != m_CallBackQueueMethod)
 		{
-			LOGD("Call BACK Data0..................");
 		 	/// 构造数组
 		 	jbyteArray byteArray = env->NewByteArray(nSize);
 		    /// 拷贝数据
 		 	env->SetByteArrayRegion(byteArray, 0, nSize, (jbyte* )pszBuffer);
-		 	LOGD("Call BACK Data1..................");
 		 	//回调java中的方法
 		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , byteArray);
 		 	/// 释放本地数组引用
 		 	env->DeleteLocalRef(byteArray);
-		 	LOGD("Call BACK Data2..................");
 		}
 	}
 }
 
-void e_SaveFrame(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
+void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 {
 	/// 获取宽度的设置
 	int nWidthBytes = nWidth * 4;/// WIDTHBYTES(nWidth * 24);
@@ -149,11 +145,11 @@ void e_SaveFrame(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
     m_BMPInfoHeader.colorUse = 0;
     m_BMPInfoHeader.colorImportant = 0;
     memcpy(pBMPData + sizeof(BmpHead), &m_BMPInfoHeader, sizeof(InfoHead));
-
-    LOGD("SaveFrame 1--------------->");
+    /*LOGD("SaveFrame 1--------------->");
 	/// 回调数据到Java
-	/// e_DisplayCallBack(env, pBMPData, nBMPBufferLen);
+	e_DisplayCallBack(env, pBMPData, nBMPBufferLen);
 
+	LOGD("SaveFrame 2--------------->");*/
 	FILE* pFile = NULL;
 	char szFilename[32];
 	int y;
@@ -168,6 +164,49 @@ void e_SaveFrame(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
     /// 释放数据缓冲
 	delete[] pBMPData;
 	pBMPData = NULL;
+	LOGD("SaveFrame finshed--------------->");
+}
+
+
+void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
+{
+	int nRGBSize = nWidth * nHeight;
+	/// 新图像像素值
+	int nArrayBuffer[nRGBSize];
+
+	int i = 0, j = 0, yp = 0;
+	int uvp = 0, u = 0, v = 0;
+	for (j = 0, yp = 0; j < nHeight; j++)
+	{
+		uvp = nRGBSize + (j >> 1) * nWidth;
+		u = 0;
+		v = 0;
+
+		for (i = 0; i < nWidth; i++, yp++)
+		{
+			int y = (0xff & ((int) pYUVBuffer[yp])) - 16;
+			if (y < 0)
+				y = 0;
+			if ((i & 1) == 0)
+			{
+				v = (0xff & pYUVBuffer[uvp++]) - 128;
+				u = (0xff & pYUVBuffer[uvp++]) - 128;
+			}
+
+			int y1192 = 1192 * y;
+			int r = (y1192 + 1634 * v);
+			int g = (y1192 - 833 * v - 400 * u);
+			int b = (y1192 + 2066 * u);
+
+			if (r < 0) r = 0; else if (r > 262143) r = 262143;
+			if (g < 0) g = 0; else if (g > 262143) g = 262143;
+			if (b < 0) b = 0; else if (b > 262143) b = 262143;
+
+			nArrayBuffer[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+		}
+	}
+	/// 回调数据
+	e_DisplayCallBack(env, (BYTE* )nArrayBuffer, nRGBSize * sizeof(int));
 }
 
 /*
@@ -181,12 +220,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IGetVersion(JNIEnv *env, jobject thi
 	av_log_set_callback(e_PrintFFmpeg);
 	LOGD("Set FFMpeg Log Call Back Success. ");
 	/// 获取版本信息测试使用
-	int nRet = 0;
-	nRet = avcodec_version();
-	/// 测试回调
-	char szTemp[128];
-	strcpy(szTemp, "哈哈, 这是回调消息");
-	e_DisplayCallBack(env, (BYTE* )szTemp, strlen(szTemp));
+	int nRet = avcodec_version();
 	return nRet;
 }
 
@@ -195,8 +229,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IGetVersion(JNIEnv *env, jobject thi
  * Method:    IInit
  * Signature: (Ljava/lang/String;IIII)I
  */
-jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jstring jstrRTSPUrl,
-		jint jnMeidaType, jint jnSawle, jint jnWith, jint jnHeight)
+jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jstring jstrRTSPUrl, jint jnMeidaType)
 {
 	int nRet = 0;
 	/// 注册解码器
@@ -207,7 +240,6 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jst
 	const char* pstrRTSPUrl = (env)->GetStringUTFChars(jstrRTSPUrl, 0);
 	/// 赋值RTSP网络地址
 	strcpy(m_szURLPath, pstrRTSPUrl);
-	m_nWith = jnWith;
 	/// 设置rtsp为TCP方式
 	if(1 == jnMeidaType)
 	{
@@ -300,15 +332,15 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	}
 
 	/// 声明数据帧变量
-	AVFrame	*pFrame = NULL, *pFrameRGB = NULL;
+	AVFrame	*pFrame = NULL, *pFrameYUV = NULL;
 	pFrame = avcodec_alloc_frame();
-	pFrameRGB = avcodec_alloc_frame();
+	pFrameYUV = avcodec_alloc_frame();
 
 	LOGD("Test2 pCodecCtx Info Width:%d  Height:%d ------------>", pCodecCtx->width, pCodecCtx->height);
 	/// 创建数据帧缓存
-	uint8_t* pPicbuffer = NULL;
-	pPicbuffer = new uint8_t[avpicture_get_size(PIX_FMT_RGB32, pCodecCtx->width, pCodecCtx->height)];
-	avpicture_fill((AVPicture *)pFrameRGB, pPicbuffer, PIX_FMT_RGB32, pCodecCtx->width, pCodecCtx->height);
+	int nPicDataSize = avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+	uint8_t* pPicbuffer = new uint8_t[nPicDataSize];
+	avpicture_fill((AVPicture *)pFrameYUV, pPicbuffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
 
 	/// 声明解码参数
 	int nCodecRet, nHasGetPicture;
@@ -337,16 +369,17 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d nCodecRet=%d, pAVPacket Size = %d...",
 						nDecodeNum++, pCodecCtx->width, pCodecCtx->height,
 						pFrame->coded_picture_number, nCodecRet, pAVPacket->size);
-				/// 格式化像素格式为RGB
+				/// 格式化像素格式为YUV
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-					pCodecCtx->width, pCodecCtx->height, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
-				/// 转换格式为RGB
+					pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+				/// 转换格式为YUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
-						0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
+						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 				/// 释放个格式化信息
 				sws_freeContext(img_convert_ctx);
 				/// 显示或者保存数据
-				e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
+				/// e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
+				e_Decode_YUV420_ARGB888(env, pPicbuffer, pCodecCtx->width, pCodecCtx->height);
 			}
 			else
 			{
@@ -357,7 +390,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 		{
 			LOGD("stream_index = %d, The Frame Is Not Video Frame, May be It's Audio Frame ?...", pAVPacket->stream_index);
 		}
-		/// 释放解码包，此数据包，在 av_read_frame 调用是被创建
+		/// 释放解码包，此数据包，在 av_read_frame 调用时被创建
 		av_free_packet(pAVPacket);
 	}
 
@@ -366,7 +399,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	pPicbuffer = NULL;
 	/// 释放数据帧对象指针
 	av_free(pFrame); pFrame = NULL;
-	av_free(pFrameRGB); pFrameRGB = NULL;
+	av_free(pFrameYUV); pFrameYUV = NULL;
 	/// 释放解码信息对象
 	avcodec_close(pCodecCtx); pCodecCtx = NULL;
 	avformat_close_input(&m_pFormatCtx);
