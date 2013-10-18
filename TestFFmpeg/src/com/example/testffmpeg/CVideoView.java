@@ -88,7 +88,7 @@ public class CVideoView  extends View  implements Runnable  {
 	
 	public void e_Stop()
 	{
-		/// 停止绘制线程		
+		/// 停止绘制线程
 	}
 	
 	@Override
@@ -107,8 +107,7 @@ public class CVideoView  extends View  implements Runnable  {
     	{
     		m_BmpBuffer = ByteBuffer.wrap(m_NativePixels);
         	m_BitMap.copyPixelsFromBuffer(m_BmpBuffer);
-    	}
-    	
+    	}    	
         canvas.drawBitmap(m_BitMap, 0, 0, m_Paint);
 	}
 

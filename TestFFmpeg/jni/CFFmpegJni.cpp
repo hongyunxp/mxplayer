@@ -110,7 +110,10 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , byteArray);
 		 	/// 释放本地数组引用
 		 	env->DeleteLocalRef(byteArray);
+		 	/// env->DeleteLocalRef(m_CallBackQueueMethod);
 		}
+
+		env->DeleteLocalRef(m_CallBackClass);
 	}
 }
 
@@ -181,7 +184,7 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 }
 
 
-void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
+/*void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
 {
 	int nRGBSize = nWidth * nHeight;
 	/// 新图像像素值
@@ -433,7 +436,7 @@ void DisplayYUV_16(unsigned int* pdst1, unsigned char* y, unsigned char* u, unsi
 			pdst [((2*j+1)*dst_ystride+i*2)>>1] = (rgb)+((r_2_pix[r] + g_2_pix[g] + b_2_pix[b])<<16);
 		}
 	}
-}
+}*/
 
 /*
  * Class:     com_example_testffmpeg_CFFmpegJni
@@ -473,8 +476,6 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jst
 	}
 	/// 初始化网络
 	nRet = avformat_network_init();
-
-	CreateYUVTab_16();
 	return nRet;
 }
 
@@ -565,9 +566,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	pFrame = avcodec_alloc_frame();
 	pFrameYUV = avcodec_alloc_frame();
 	/// 创建转换数据缓冲
-	int nConvertSize = avpicture_get_size(PIX_FMT_YUV420P, iWidth, iHeight);
+	int nConvertSize = avpicture_get_size(PIX_FMT_RGB32, iWidth, iHeight);
 	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
-	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_YUV420P, iWidth, iHeight);
+	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_RGB32, iWidth, iHeight);
 
 	/// 声明解码参数
 	int nCodecRet, nHasGetPicture;
@@ -594,17 +595,14 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			{
 				/// 格式化像素格式为YUV
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-					iWidth, iHeight, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+					iWidth, iHeight, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
 				/// 转换格式为YUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
 						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 				/// 释放个格式化信息
 				sws_freeContext(img_convert_ctx);
-
 				/// 回调显示数据
-				/// e_DisplayCallBack(env, pConvertbuffer, nConvertSize);
-
-				e_DecodeButter_YUV420_ARGB888(env, pConvertbuffer, iWidth, iHeight);
+				e_DisplayCallBack(env, pConvertbuffer, nConvertSize);
 			}
 		}
 		/// 释放解码包，此数据包，在 av_read_frame 调用时被创建
