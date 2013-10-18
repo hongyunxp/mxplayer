@@ -25,6 +25,12 @@ public class CMediaProcess implements Runnable{
 		/// 初始化媒体对象
 		return m_FFMpegJni.IInit(strRTSPUrl, nMediaType);
 	}
+	
+	public void e_IResize(int nDecodeWidth, int nDecodeHeight)
+	{
+		/// 设置显示像素
+		m_FFMpegJni.IResize(nDecodeWidth, nDecodeHeight);
+	}
 
 	public void e_Start()
 	{

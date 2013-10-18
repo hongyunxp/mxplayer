@@ -28,7 +28,7 @@ extern "C" {
 
 #define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
 
-/// ¶¨ÒåÈ«¾Ö±äÁ¿
+/// å®šä¹‰å…¨å±€å˜é‡
 AVFormatContext* m_pFormatCtx = NULL;
 
 AVDictionary* m_pDictOptions = NULL;
@@ -39,10 +39,23 @@ int nDecodeNum = 0;
 
 char m_szURLPath[512];
 
+int iWidth = 0, iHeight = 0;
+
+int *colortab=NULL;
+int *u_b_tab=NULL;
+int *u_g_tab=NULL;
+int *v_g_tab=NULL;
+int *v_r_tab=NULL;
+
+unsigned int *rgb_2_pix=NULL;
+unsigned int *r_2_pix=NULL;
+unsigned int *g_2_pix=NULL;
+unsigned int *b_2_pix=NULL;
+
 static jclass		m_CallBackClass = NULL;
 static jmethodID 	m_CallBackQueueMethod = NULL;
 
-/// ¶¨ÒåÈÕÖ¾»Øµ÷º¯Êı
+/// å®šä¹‰æ—¥å¿—å›è°ƒå‡½æ•°
 static void e_PrintFFmpeg(void* ptr, int level, const char* fmt, va_list vl)
 {
 	switch(level)
@@ -73,29 +86,29 @@ static void e_PrintFFmpeg(void* ptr, int level, const char* fmt, va_list vl)
 	}
 }
 
-/// ¶¨Òå´òÓ¡ĞÅÏ¢
+/// å®šä¹‰æ‰“å°ä¿¡æ¯
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, MYLOG_TAG, __VA_ARGS__)
 
 
 /****
- * »Øµ÷Êı¾İ·½·¨
+ * å›è°ƒæ•°æ®æ–¹æ³•
  */
 void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 {
 	m_CallBackClass = env->FindClass("com/example/testffmpeg/CVideoFrames");
 	if(NULL != m_CallBackClass)
 	{
-		/// ÔÙÕÒÀàÖĞµÄ¾²Ì¬·½·¨
+		/// å†æ‰¾ç±»ä¸­çš„é™æ€æ–¹æ³•
 		m_CallBackQueueMethod = env->GetStaticMethodID(m_CallBackClass, "e_AddDataToQueue", "([B)V");
 		if(NULL != m_CallBackQueueMethod)
 		{
-		 	/// ¹¹ÔìÊı×é
+		 	/// æ„é€ æ•°ç»„
 		 	jbyteArray byteArray = env->NewByteArray(nSize);
-		    /// ¿½±´Êı¾İ
+		    /// æ‹·è´æ•°æ®
 		 	env->SetByteArrayRegion(byteArray, 0, nSize, (jbyte* )pszBuffer);
-		 	//»Øµ÷javaÖĞµÄ·½·¨
+		 	/// å›è°ƒjavaä¸­çš„æ–¹æ³•
 		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , byteArray);
-		 	/// ÊÍ·Å±¾µØÊı×éÒıÓÃ
+		 	/// é‡Šæ”¾æœ¬åœ°æ•°ç»„å¼•ç”¨
 		 	env->DeleteLocalRef(byteArray);
 		}
 	}
@@ -103,7 +116,7 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 
 void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 {
-	/// »ñÈ¡¿í¶ÈµÄÉèÖÃ
+	/// è·å–å®½åº¦çš„è®¾ç½®
 	int nWidthBytes = nWidth * 4;/// WIDTHBYTES(nWidth * 24);
 	int nBufferLen =  nWidthBytes * nHeight;
 
@@ -112,29 +125,29 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 	int nBMPBufferLen = nBMPHeadLen + nBufferLen;
 	BYTE* pBMPData = new BYTE[nBMPBufferLen];
 	memset(pBMPData, 0x00, nBMPBufferLen);
-	/// »ñÈ¡Êı¾İÄÚÈİ²¿·ÖµÄÖ¸Õë
+	/// è·å–æ•°æ®å†…å®¹éƒ¨åˆ†çš„æŒ‡é’ˆ
 	BYTE* pBuffer = pBMPData + nBMPHeadLen;
-	/// ½«Í¼Ïñ×ªÎªbmp´æµ½ÄÚ´æÖĞ, ÕâÀïµÄÍ¼ÏñÊÇµ¹Á¢µÄ
+	/// å°†å›¾åƒè½¬ä¸ºbmpå­˜åˆ°å†…å­˜ä¸­, è¿™é‡Œçš„å›¾åƒæ˜¯å€’ç«‹çš„
 	for(int i = 0; i < nHeight; i++)
 	{
 		memcpy(pBuffer + nWidthBytes * i, pFrameRGB->data[0] + i * pFrameRGB->linesize[0], nWidthBytes);
 	}
 
-	/// ¸³ÖµBMPÍ¼Æ¬Í·
+	/// èµ‹å€¼BMPå›¾ç‰‡å¤´
     BmpHead m_BMPHeader;
-    /// ¸ßµØÎ»×ª»»
+    /// é«˜åœ°ä½è½¬æ¢
     m_BMPHeader.bfType = ('M' << 8) | 'B';
     m_BMPHeader.imageSize = nBMPBufferLen;
     m_BMPHeader.blank = 0;
     m_BMPHeader.startPosition = sizeof(BmpHead) + sizeof(InfoHead);
     memcpy(pBMPData, &m_BMPHeader, sizeof(BmpHead));
 
-    /// ¸³ÖµBMPÍ¼Æ¬ĞÅÏ¢Í·
+    /// èµ‹å€¼BMPå›¾ç‰‡ä¿¡æ¯å¤´
     InfoHead  m_BMPInfoHeader;
     m_BMPInfoHeader.Length = sizeof(InfoHead);
     m_BMPInfoHeader.width = nWidth;
-    /// = ×¢Òâ£¬ÕâÀïµÄbmpinfo.bmiHeader.biHeight ±äÁ¿µÄÕı¸º
-    /// = ¾ö¶¨bmpÎÄ¼şµÄ´æ´¢·½Ê½£¬Èç¹ûÎª¸ºÖµ£¬±íÊ¾ÏñËØÊÇµ¹¹ıÀ´µÄ
+    /// = æ³¨æ„ï¼Œè¿™é‡Œçš„bmpinfo.bmiHeader.biHeight å˜é‡çš„æ­£è´Ÿ
+    /// = å†³å®šbmpæ–‡ä»¶çš„å­˜å‚¨æ–¹å¼ï¼Œå¦‚æœä¸ºè´Ÿå€¼ï¼Œè¡¨ç¤ºåƒç´ æ˜¯å€’è¿‡æ¥çš„
     m_BMPInfoHeader.height = -nHeight;
     m_BMPInfoHeader.colorPlane = 1;
     m_BMPInfoHeader.bitColor = 32;
@@ -146,7 +159,7 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
     m_BMPInfoHeader.colorImportant = 0;
     memcpy(pBMPData + sizeof(BmpHead), &m_BMPInfoHeader, sizeof(InfoHead));
     /*LOGD("SaveFrame 1--------------->");
-	/// »Øµ÷Êı¾İµ½Java
+	/// å›è°ƒæ•°æ®åˆ°Java
 	e_DisplayCallBack(env, pBMPData, nBMPBufferLen);
 
 	LOGD("SaveFrame 2--------------->");*/
@@ -161,7 +174,7 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 	}
 	fwrite(pBMPData, 1, nBMPBufferLen, pFile);
 	fclose(pFile);
-    /// ÊÍ·ÅÊı¾İ»º³å
+    /// é‡Šæ”¾æ•°æ®ç¼“å†²
 	delete[] pBMPData;
 	pBMPData = NULL;
 	LOGD("SaveFrame finshed--------------->");
@@ -171,7 +184,7 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
 {
 	int nRGBSize = nWidth * nHeight;
-	/// ĞÂÍ¼ÏñÏñËØÖµ
+	/// æ–°å›¾åƒåƒç´ å€¼
 	int nArrayBuffer[nRGBSize];
 
 	int i = 0, j = 0, yp = 0;
@@ -205,8 +218,181 @@ void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHei
 			nArrayBuffer[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
 		}
 	}
-	/// »Øµ÷Êı¾İ
+	/// å›è°ƒæ•°æ®
 	e_DisplayCallBack(env, (BYTE* )nArrayBuffer, nRGBSize * sizeof(int));
+}
+
+int g_v_table[256],g_u_table[256],y_table[256];
+int r_yv_table[256][256],b_yu_table[256][256];
+int inited = 0;
+
+void initTable()
+{
+	if(inited == 0)
+	{
+		inited = 1;
+		int m = 0,n=0;
+		for (; m < 256; m++)
+		{
+			g_v_table[m] = 833 * (m - 128);
+			g_u_table[m] = 400 * (m - 128);
+			y_table[m] = 1192 * (m - 16);
+		}
+		int temp = 0;
+		for (m = 0; m < 256; m++)
+		{
+			for (n = 0; n < 256; n++)
+			{
+				temp = 1192 * (m - 16) + 1634 * (n - 128);
+				if (temp < 0) temp = 0; else if (temp > 262143) temp = 262143;
+				r_yv_table[m][n] = temp;
+
+				temp = 1192 * (m - 16) + 2066 * (n - 128);
+				if (temp < 0) temp = 0; else if (temp > 262143) temp = 262143;
+				b_yu_table[m][n] = temp;
+			}
+		}
+	}
+}
+
+void DeleteYUVTab()
+{
+	av_free(colortab);
+	colortab = NULL;
+
+	av_free(rgb_2_pix);
+	rgb_2_pix = NULL;
+	inited = 0;
+}
+
+
+void CreateYUVTab_16()
+{
+	if(inited == 0)
+	{
+		int i;
+		int u, v;
+
+		colortab = (int *)av_malloc(4*256*sizeof(int));
+		u_b_tab = &colortab[0*256];
+		u_g_tab = &colortab[1*256];
+		v_g_tab = &colortab[2*256];
+		v_r_tab = &colortab[3*256];
+
+		for (i=0; i<256; i++)
+		{
+			u = v = (i-128);
+
+			u_b_tab[i] = (int) ( 1.772 * u);
+			u_g_tab[i] = (int) ( 0.34414 * u);
+			v_g_tab[i] = (int) ( 0.71414 * v);
+			v_r_tab[i] = (int) ( 1.402 * v);
+		}
+
+		rgb_2_pix = (unsigned int *)av_malloc(3*768*sizeof(unsigned int));
+
+		r_2_pix = &rgb_2_pix[0*768];
+		g_2_pix = &rgb_2_pix[1*768];
+		b_2_pix = &rgb_2_pix[2*768];
+
+		for(i=0; i<256; i++)
+		{
+			r_2_pix[i] = 0;
+			g_2_pix[i] = 0;
+			b_2_pix[i] = 0;
+		}
+
+		for(i=0; i<256; i++)
+		{
+			r_2_pix[i+256] = (i & 0xF8) << 8;
+			g_2_pix[i+256] = (i & 0xFC) << 3;
+			b_2_pix[i+256] = (i ) >> 3;
+		}
+
+		for(i=0; i<256; i++)
+		{
+			r_2_pix[i+512] = 0xF8 << 8;
+			g_2_pix[i+512] = 0xFC << 3;
+			b_2_pix[i+512] = 0x1F;
+		}
+
+		r_2_pix += 256;
+		g_2_pix += 256;
+		b_2_pix += 256;
+	}
+}
+
+void DisplayYUV_16(unsigned int* pdst1, unsigned char* y, unsigned char* u, unsigned char* v,
+		int width, int height, int src_ystride, int src_uvstride, int dst_ystride)
+{
+	int i, j;
+	int r, g, b, rgb;
+
+	int yy, ub, ug, vg, vr;
+
+	unsigned char* yoff;
+	unsigned char* uoff;
+	unsigned char* voff;
+
+	unsigned int* pdst=pdst1;
+
+	int width2 = width/2;
+	int height2 = height/2;
+
+	if(width2>iWidth/2)
+	{
+		width2=iWidth/2;
+
+		y+=(width-iWidth)/4*2;
+		u+=(width-iWidth)/4;
+		v+=(width-iWidth)/4;
+	}
+
+	if(height2>iHeight)
+		height2=iHeight;
+
+	for(j=0; j<height2; j++) // ä¸€æ¬¡2x2å…±å››ä¸ªåƒç´ 
+	{
+		yoff = y + j * 2 * src_ystride;
+		uoff = u + j * src_uvstride;
+		voff = v + j * src_uvstride;
+
+		for(i=0; i<width2; i++)
+		{
+			yy  = *(yoff+(i<<1));
+			ub = u_b_tab[*(uoff+i)];
+			ug = u_g_tab[*(uoff+i)];
+			vg = v_g_tab[*(voff+i)];
+			vr = v_r_tab[*(voff+i)];
+
+			b = yy + ub;
+			g = yy - ug - vg;
+			r = yy + vr;
+
+			rgb = r_2_pix[r] + g_2_pix[g] + b_2_pix[b];
+
+			yy = *(yoff+(i<<1)+1);
+			b = yy + ub;
+			g = yy - ug - vg;
+			r = yy + vr;
+
+			pdst[(j*dst_ystride+i)] = (rgb)+((r_2_pix[r] + g_2_pix[g] + b_2_pix[b])<<16);
+
+			yy = *(yoff+(i<<1)+src_ystride);
+			b = yy + ub;
+			g = yy - ug - vg;
+			r = yy + vr;
+
+			rgb = r_2_pix[r] + g_2_pix[g] + b_2_pix[b];
+
+			yy = *(yoff+(i<<1)+src_ystride+1);
+			b = yy + ub;
+			g = yy - ug - vg;
+			r = yy + vr;
+
+			pdst [((2*j+1)*dst_ystride+i*2)>>1] = (rgb)+((r_2_pix[r] + g_2_pix[g] + b_2_pix[b])<<16);
+		}
+	}
 }
 
 /*
@@ -216,10 +402,10 @@ void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHei
  */
 jint Java_com_example_testffmpeg_CFFmpegJni_IGetVersion(JNIEnv *env, jobject thiz)
 {
-	/// ÉèÖÃFFmpegÈÕÖ¾ĞÅÏ¢»Øµ÷
+	/// è®¾ç½®FFmpegæ—¥å¿—ä¿¡æ¯å›è°ƒ
 	av_log_set_callback(e_PrintFFmpeg);
 	LOGD("Set FFMpeg Log Call Back Success. ");
-	/// »ñÈ¡°æ±¾ĞÅÏ¢²âÊÔÊ¹ÓÃ
+	/// è·å–ç‰ˆæœ¬ä¿¡æ¯æµ‹è¯•ä½¿ç”¨
 	int nRet = avcodec_version();
 	return nRet;
 }
@@ -232,21 +418,23 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IGetVersion(JNIEnv *env, jobject thi
 jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jstring jstrRTSPUrl, jint jnMeidaType)
 {
 	int nRet = 0;
-	/// ×¢²á½âÂëÆ÷
+	/// æ³¨å†Œè§£ç å™¨
 	av_register_all();
-	/// ×¢²á½âÂëÆ÷
+	/// æ³¨å†Œè§£ç å™¨
 	avcodec_register_all();
-	/// »ñÈ¡RTSPÂ·¾¶
+	/// è·å–RTSPè·¯å¾„
 	const char* pstrRTSPUrl = (env)->GetStringUTFChars(jstrRTSPUrl, 0);
-	/// ¸³ÖµRTSPÍøÂçµØÖ·
+	/// èµ‹å€¼RTSPç½‘ç»œåœ°å€
 	strcpy(m_szURLPath, pstrRTSPUrl);
-	/// ÉèÖÃrtspÎªTCP·½Ê½
+	/// è®¾ç½®rtspä¸ºTCPæ–¹å¼
 	if(1 == jnMeidaType)
 	{
 		av_dict_set(&m_pDictOptions, "rtsp_transport", "tcp", 0);
 	}
-	/// ³õÊ¼»¯ÍøÂç
+	/// åˆå§‹åŒ–ç½‘ç»œ
 	nRet = avformat_network_init();
+
+	CreateYUVTab_16();
 	return nRet;
 }
 
@@ -257,7 +445,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jst
  */
 void Java_com_example_testffmpeg_CFFmpegJni_IResize(JNIEnv *env, jobject thiz, jint jnWith, jint jnHeight)
 {
-
+	/// è®¾ç½®æ˜¾ç¤ºçš„å¤§å°
+	iWidth = jnWith;
+	iHeight = jnHeight;
 }
 
 /*
@@ -267,26 +457,26 @@ void Java_com_example_testffmpeg_CFFmpegJni_IResize(JNIEnv *env, jobject thiz, j
  */
 jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 {
-	/// ¶¨Òå·µ»ØÖµ
+	/// å®šä¹‰è¿”å›å€¼
 	int nRet = -1;
-	/// ´ò¿ªÎÄ¼ş
+	/// æ‰“å¼€æ–‡ä»¶
 	if(NULL != m_pFormatCtx)
 	{
 		avformat_close_input(&m_pFormatCtx);
-		/// ÊÍ·ÅÊı¾İ
+		/// é‡Šæ”¾æ•°æ®
 		av_free(m_pFormatCtx);
 		m_pFormatCtx = NULL;
 	}
 
 	if(NULL == m_pFormatCtx && NULL != m_pDictOptions)
 	{
-		/// ´ò¿ªÎÄ¼ş
+		/// æ‰“å¼€æ–‡ä»¶
 		if(0 != (nRet = avformat_open_input(&m_pFormatCtx, m_szURLPath, 0, &m_pDictOptions)))
 		{
 			char szTemp[256];
 			memset(szTemp, 0x00, sizeof(szTemp));
 			av_strerror(nRet, szTemp, 255);
-			/// ´òÓ¡´íÎóĞÅÏ¢
+			/// æ‰“å°é”™è¯¯ä¿¡æ¯
 			LOGD("%s, Error Code = %d, %s, Error = %s", m_szURLPath, nRet,
 					" The Error URL Or Path--------------->", szTemp);
 			return nRet;
@@ -324,86 +514,100 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 		return -1;
 	}
 
-	LOGD("Test1 pCodecCtx Info Width:%d  Height:%d ------------>", pCodecCtx->width, pCodecCtx->height);
-	if(0 > avcodec_open2(pCodecCtx, pCodec, &m_pDictOptions))
+	if(0 > avcodec_open2(pCodecCtx, pCodec, NULL))
 	{
 		LOGD("Could not open codec.");
 		return -1;
 	}
 
-	/// ÉùÃ÷Êı¾İÖ¡±äÁ¿
+	/// å£°æ˜æ•°æ®å¸§å˜é‡
 	AVFrame	*pFrame = NULL, *pFrameYUV = NULL;
 	pFrame = avcodec_alloc_frame();
 	pFrameYUV = avcodec_alloc_frame();
-
-	LOGD("Test2 pCodecCtx Info Width:%d  Height:%d ------------>", pCodecCtx->width, pCodecCtx->height);
-	/// ´´½¨Êı¾İÖ¡»º´æ
-	int nPicDataSize = avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+	/// åˆ›å»ºæ•°æ®å¸§ç¼“å­˜
+	int nPicDataSize = iWidth * iHeight * 2;
 	uint8_t* pPicbuffer = new uint8_t[nPicDataSize];
-	avpicture_fill((AVPicture *)pFrameYUV, pPicbuffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+	memset(pPicbuffer, 0x00, nPicDataSize);
 
-	/// ÉùÃ÷½âÂë²ÎÊı
+	//	int nConvertSize = avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+	//	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
+	//	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+
+	/// å£°æ˜è§£ç å‚æ•°
 	int nCodecRet, nHasGetPicture;
-	/// ÉùÃ÷¸ñÊ½×ª»»²ÎÊı
+	/// å£°æ˜æ ¼å¼è½¬æ¢å‚æ•°
 	struct SwsContext* img_convert_ctx = NULL;
-	LOGD("Test3 pCodecCtx Info Width:%d  Height:%d ------------>", pCodecCtx->width, pCodecCtx->height);
-	/// ÉùÃ÷Êı¾İÖ¡½âÂëÊı¾İ°ü
+	LOGD("Test3 pCodecCtx Info Width:%d  Height:%d ------------>",
+			pCodecCtx->width, pCodecCtx->height);
+	/// å£°æ˜æ•°æ®å¸§è§£ç æ•°æ®åŒ…
 	int nPackgeSize  = pCodecCtx->width * pCodecCtx->height;
 	AVPacket* pAVPacket = (AVPacket *)malloc(sizeof(AVPacket));
 	av_new_packet(pAVPacket, nPackgeSize);
 
-	/// ÁĞ³öÊä³öÎÄ¼şµÄÏà¹ØÁ÷ĞÅÏ¢
+	/// åˆ—å‡ºè¾“å‡ºæ–‡ä»¶çš„ç›¸å…³æµä¿¡æ¯
 	av_dump_format(m_pFormatCtx, 0, m_szURLPath, 0);
-	/// ÉèÖÃ²¥·Å×´Ì¬
+	/// è®¾ç½®æ’­æ”¾çŠ¶æ€
 	m_bIsPlaying = true;
-	/// ¶ÁÈ¡Êı¾İÖ¡
+	/// è¯»å–æ•°æ®å¸§
 	while(0 <= av_read_frame(m_pFormatCtx, pAVPacket) && true == m_bIsPlaying)
 	{
-		/// ÅĞ¶ÏÊÇ·ñÊÇÊÓÆµÊı¾İÁ÷
+		/// åˆ¤æ–­æ˜¯å¦æ˜¯è§†é¢‘æ•°æ®æµ
 		if(nVideoIndex == pAVPacket->stream_index)
 		{
-			/// ½âÂëÊı¾İ°ü
+			/// è§£ç æ•°æ®åŒ…
 			nCodecRet = avcodec_decode_video2(pCodecCtx, pFrame, &nHasGetPicture, pAVPacket);
 			if(0 < nHasGetPicture)
 			{
-				LOGD("Num:%d  Width:%d  Height:%d StreamNum:%d nCodecRet=%d, pAVPacket Size = %d...",
-						nDecodeNum++, pCodecCtx->width, pCodecCtx->height,
-						pFrame->coded_picture_number, nCodecRet, pAVPacket->size);
-				/// ¸ñÊ½»¯ÏñËØ¸ñÊ½ÎªYUV
-				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
+				/// æ ¼å¼åŒ–åƒç´ æ ¼å¼ä¸ºYUV
+				/*img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
 					pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
-				/// ×ª»»¸ñÊ½ÎªYUV
+				/// è½¬æ¢æ ¼å¼ä¸ºYUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
 						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
-				/// ÊÍ·Å¸ö¸ñÊ½»¯ĞÅÏ¢
+				/// é‡Šæ”¾ä¸ªæ ¼å¼åŒ–ä¿¡æ¯
 				sws_freeContext(img_convert_ctx);
-				/// ÏÔÊ¾»òÕß±£´æÊı¾İ
+				/// æ˜¾ç¤ºæˆ–è€…ä¿å­˜æ•°æ®
 				/// e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-				e_Decode_YUV420_ARGB888(env, pPicbuffer, pCodecCtx->width, pCodecCtx->height);
-			}
-			else
-			{
-				LOGD("nCodecRet = %d, pAVPacket Size = %d, Decode Packet Error...", nCodecRet, pAVPacket->size);
+				/// e_Decode_YUV420_ARGB888(env, pPicbuffer, pCodecCtx->width, pCodecCtx->height);
+
+				/*img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
+						pCodecCtx->width, pCodecCtx->height, PIX_FMT_RGB565LE, SWS_BICUBIC, NULL, NULL, NULL);
+				/// è½¬æ¢æ ¼å¼ä¸ºYUV
+				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
+						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);*/
+
+				DisplayYUV_16((unsigned int * )pPicbuffer, pFrame->data[0],
+						pFrame->data[1], pFrame->data[2],
+						pCodecCtx->width, pCodecCtx->height,
+						pFrame->linesize[0], pFrame->linesize[1], iWidth);
+
+				e_DisplayCallBack(env, pPicbuffer, nPicDataSize);
 			}
 		}
-		else
-		{
-			LOGD("stream_index = %d, The Frame Is Not Video Frame, May be It's Audio Frame ?...", pAVPacket->stream_index);
-		}
-		/// ÊÍ·Å½âÂë°ü£¬´ËÊı¾İ°ü£¬ÔÚ av_read_frame µ÷ÓÃÊ±±»´´½¨
+//		else
+//		{
+//			LOGD("stream_index = %d, The Frame Is Not Video Frame, May be It's Audio Frame ?...", pAVPacket->stream_index);
+//		}
+		/// é‡Šæ”¾è§£ç åŒ…ï¼Œæ­¤æ•°æ®åŒ…ï¼Œåœ¨ av_read_frame è°ƒç”¨æ—¶è¢«åˆ›å»º
 		av_free_packet(pAVPacket);
 	}
 
-	/// ÊÍ·ÅÍ¼Æ¬Êı¾İ»º´æ
+	/// é‡Šæ”¾å›¾ç‰‡æ•°æ®ç¼“å­˜
 	delete[] pPicbuffer;
 	pPicbuffer = NULL;
-	/// ÊÍ·ÅÊı¾İÖ¡¶ÔÏóÖ¸Õë
+	/// é‡Šæ”¾YUVè¡¨
+	DeleteYUVTab();
+	/// é‡Šæ”¾è½¬æ¢å›¾ç‰‡ç¼“å­˜
+	/// delete[] pConvertbuffer;
+	/// pConvertbuffer = NULL;
+	/// é‡Šæ”¾æ•°æ®å¸§å¯¹è±¡æŒ‡é’ˆ
 	av_free(pFrame); pFrame = NULL;
 	av_free(pFrameYUV); pFrameYUV = NULL;
-	/// ÊÍ·Å½âÂëĞÅÏ¢¶ÔÏó
+
+	/// é‡Šæ”¾è§£ç ä¿¡æ¯å¯¹è±¡
 	avcodec_close(pCodecCtx); pCodecCtx = NULL;
 	avformat_close_input(&m_pFormatCtx);
-	/// ÊÍ·ÅÊı¾İ
+	/// é‡Šæ”¾æ•°æ®
 	av_free(m_pFormatCtx);
 	m_pFormatCtx = NULL;
 	return nRet;
@@ -416,7 +620,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
  */
 jint Java_com_example_testffmpeg_CFFmpegJni_IStop(JNIEnv *env, jobject thiz)
 {
-	/// ¸³ÖµÍ£Ö¹²¥·Å±êÊ¶
+	/// èµ‹å€¼åœæ­¢æ’­æ”¾æ ‡è¯†
 	m_bIsPlaying = false;
 	return 0;
 }

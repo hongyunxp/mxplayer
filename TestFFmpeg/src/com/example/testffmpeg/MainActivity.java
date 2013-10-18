@@ -20,10 +20,12 @@ public class MainActivity extends Activity {
 	private Button btnGetVersion = null;
 	private Button btnStartPlay = null;
 	private Button btnStopPlay = null;	
+	private CVideoView view = null;
 	private CMediaProcess m_MediaProcess = null;
 	private String m_strRTSPUrl = "";
 	private EditText EdtUrl = null;
 	private DisplayMetrics m_DisPlayMetrics;
+	private int m_nVideoHeight = 0;
 	
 	public CFFmpegJni m_FFmpegJni = null;
 	/// 加载要调用的动态库
@@ -40,20 +42,20 @@ public class MainActivity extends Activity {
 		/// 显示矩阵对象
 		m_DisPlayMetrics = new DisplayMetrics();  
 		this.getWindowManager().getDefaultDisplay().getMetrics(m_DisPlayMetrics);
-	    int nVideoHeight = (m_DisPlayMetrics.widthPixels / 16) * 9;
-		/// int nVideoHeight = (m_DisPlayMetrics.widthPixels / 4) * 3;
+		m_nVideoHeight = (m_DisPlayMetrics.widthPixels / 16) * 9;
+		/// m_nVideoHeight = (m_DisPlayMetrics.widthPixels / 4) * 3;
 	    
-	    Log.i("DisPlayInfo", "nVideoWidth" + m_DisPlayMetrics.widthPixels + "nVideoHeight" + nVideoHeight);
+	    Log.i("DisPlayInfo", "nVideoWidth" + m_DisPlayMetrics.widthPixels + "nVideoHeight" + m_nVideoHeight);
 		
 		/// 设置播放显示界面
-	    CVideoView view = (CVideoView)findViewById(R.id.ConstonVideoView);
+	    view = (CVideoView)findViewById(R.id.ConstonVideoView);
 	    view.e_SetDisplayWidth(m_DisPlayMetrics.widthPixels);
 	    /// 设置视频或图片显示的高度
-	    view.e_SetDisplayHeight(nVideoHeight);
+	    view.e_SetDisplayHeight(m_nVideoHeight);
 	    view.e_SetContext(this);
 	    /// 设置控件显示的高度
 	    RelativeLayout.LayoutParams Params = (RelativeLayout.LayoutParams) view.getLayoutParams();
-	    Params.height = nVideoHeight;
+	    Params.height = m_nVideoHeight;
 	    view.setLayoutParams(Params);
 	    view.setBackgroundColor(Color.BLACK);
 		view.e_Play();
@@ -107,6 +109,7 @@ public class MainActivity extends Activity {
 					/// 初始化播放信息
 					if(0 == m_MediaProcess.e_Init(m_strRTSPUrl, CMediaProcess.Net_TCP_Type))
 					{
+						m_MediaProcess.e_IResize(view.e_GetDisplayWidth(), view.e_GetDisplayHeight());
 						/// 开始播放
 						m_MediaProcess.e_Start();
 					}

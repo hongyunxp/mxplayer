@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 public class CVideoView  extends View  implements Runnable  {
@@ -74,7 +75,13 @@ public class CVideoView  extends View  implements Runnable  {
 
 	public void e_Play()
 	{
-		m_BitMap = Bitmap.createBitmap(352, 288, Bitmap.Config.ARGB_8888);
+		if(null == m_BitMap)
+		{
+			m_BitMap = Bitmap.createBitmap(m_nDisplayWidth, m_nDisplayHeight, Bitmap.Config.RGB_565);
+			
+			Log.i("TestBMP", "m_nDisplayWidth = " + m_nDisplayWidth + ", m_nDisplayHeight = "
+					+ m_nDisplayHeight + ", BitMapCount = " + m_BitMap.getByteCount());
+		}
 		/// 启动绘制线程
 	    new Thread(this).start();
 	}
