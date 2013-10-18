@@ -565,16 +565,14 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	pFrame = avcodec_alloc_frame();
 	pFrameYUV = avcodec_alloc_frame();
 	/// 创建转换数据缓冲
-	int nConvertSize = avpicture_get_size(PIX_FMT_RGB32, iWidth, iHeight);
+	int nConvertSize = avpicture_get_size(PIX_FMT_YUV420P, iWidth, iHeight);
 	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
-	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_RGB32, iWidth, iHeight);
+	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_YUV420P, iWidth, iHeight);
 
 	/// 声明解码参数
 	int nCodecRet, nHasGetPicture;
 	/// 声明格式转换参数
 	struct SwsContext* img_convert_ctx = NULL;
-	LOGD("Test3 pCodecCtx Info Width:%d  Height:%d ------------>",
-			pCodecCtx->width, pCodecCtx->height);
 	/// 声明数据帧解码数据包
 	int nPackgeSize  = pCodecCtx->width * pCodecCtx->height;
 	AVPacket* pAVPacket = (AVPacket *)malloc(sizeof(AVPacket));
@@ -596,7 +594,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			{
 				/// 格式化像素格式为YUV
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-					iWidth, iHeight, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
+					iWidth, iHeight, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 				/// 转换格式为YUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
 						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
@@ -604,11 +602,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 				sws_freeContext(img_convert_ctx);
 
 				/// 回调显示数据
-				e_DisplayCallBack(env, pConvertbuffer, nConvertSize);
+				/// e_DisplayCallBack(env, pConvertbuffer, nConvertSize);
 
-				/// 显示或者保存数据
-				/// e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-				/// e_DecodeButter_YUV420_ARGB888(env, pConvertbuffer, iWidth, iHeight);
+				e_DecodeButter_YUV420_ARGB888(env, pConvertbuffer, iWidth, iHeight);
 			}
 		}
 		/// 释放解码包，此数据包，在 av_read_frame 调用时被创建
