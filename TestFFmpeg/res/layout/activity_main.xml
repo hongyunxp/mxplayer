@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textWebEditText"
-        android:text="123.h264"/>
+        android:text="test.mp4"/>
     
     <Button 
         android:id="@+id/btnStartPlay"

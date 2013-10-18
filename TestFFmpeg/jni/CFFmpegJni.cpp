@@ -255,6 +255,46 @@ void initTable()
 	}
 }
 
+void e_DecodeButter_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
+{
+	int nRGBSize = nWidth * nHeight;
+	/// 新图像像素值
+	int nArrayBuffer[nRGBSize];
+
+	initTable();
+
+	int i = 0, j = 0,yp = 0;
+	int uvp = 0, u = 0, v = 0;
+	for (j = 0, yp = 0; j < nHeight; j++)
+	{
+		uvp = nRGBSize + (j >> 1) * nWidth;
+		u = 0;
+		v = 0;
+		for (i = 0; i < nWidth; i++, yp++)
+		{
+			int y = (0xff & ((int) pYUVBuffer[yp]));
+			if (y < 0)
+				y = 0;
+			if ((i & 1) == 0)
+			{
+				v = (0xff & pYUVBuffer[uvp++]);
+				u = (0xff & pYUVBuffer[uvp++]);
+			}
+
+			int y1192 = y_table[y];
+			int r = r_yv_table[y][v];
+			int g = (y1192 - g_v_table[v] - g_u_table[u]);
+			int b = b_yu_table[y][u];
+
+			if (g < 0) g = 0; else if (g > 262143) g = 262143;
+
+			nArrayBuffer[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+		}
+	}
+	/// 回调数据
+	e_DisplayCallBack(env, (BYTE* )nArrayBuffer, nRGBSize * sizeof(int));
+}
+
 void DeleteYUVTab()
 {
 	av_free(colortab);
@@ -524,14 +564,10 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	AVFrame	*pFrame = NULL, *pFrameYUV = NULL;
 	pFrame = avcodec_alloc_frame();
 	pFrameYUV = avcodec_alloc_frame();
-	/// 创建数据帧缓存
-	int nPicDataSize = iWidth * iHeight * 2;
-	uint8_t* pPicbuffer = new uint8_t[nPicDataSize];
-	memset(pPicbuffer, 0x00, nPicDataSize);
-
-	//	int nConvertSize = avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
-	//	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
-	//	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+	/// 创建转换数据缓冲
+	int nConvertSize = avpicture_get_size(PIX_FMT_RGB32, iWidth, iHeight);
+	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
+	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_RGB32, iWidth, iHeight);
 
 	/// 声明解码参数
 	int nCodecRet, nHasGetPicture;
@@ -559,47 +595,29 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			if(0 < nHasGetPicture)
 			{
 				/// 格式化像素格式为YUV
-				/*img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-					pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
+					iWidth, iHeight, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
 				/// 转换格式为YUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
 						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 				/// 释放个格式化信息
 				sws_freeContext(img_convert_ctx);
+
+				/// 回调显示数据
+				e_DisplayCallBack(env, pConvertbuffer, nConvertSize);
+
 				/// 显示或者保存数据
 				/// e_SaveFrame(env, pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-				/// e_Decode_YUV420_ARGB888(env, pPicbuffer, pCodecCtx->width, pCodecCtx->height);
-
-				/*img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-						pCodecCtx->width, pCodecCtx->height, PIX_FMT_RGB565LE, SWS_BICUBIC, NULL, NULL, NULL);
-				/// 转换格式为YUV
-				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
-						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);*/
-
-				DisplayYUV_16((unsigned int * )pPicbuffer, pFrame->data[0],
-						pFrame->data[1], pFrame->data[2],
-						pCodecCtx->width, pCodecCtx->height,
-						pFrame->linesize[0], pFrame->linesize[1], iWidth);
-
-				e_DisplayCallBack(env, pPicbuffer, nPicDataSize);
+				/// e_DecodeButter_YUV420_ARGB888(env, pConvertbuffer, iWidth, iHeight);
 			}
 		}
-//		else
-//		{
-//			LOGD("stream_index = %d, The Frame Is Not Video Frame, May be It's Audio Frame ?...", pAVPacket->stream_index);
-//		}
 		/// 释放解码包，此数据包，在 av_read_frame 调用时被创建
 		av_free_packet(pAVPacket);
 	}
 
-	/// 释放图片数据缓存
-	delete[] pPicbuffer;
-	pPicbuffer = NULL;
-	/// 释放YUV表
-	DeleteYUVTab();
 	/// 释放转换图片缓存
-	/// delete[] pConvertbuffer;
-	/// pConvertbuffer = NULL;
+	delete[] pConvertbuffer;
+	pConvertbuffer = NULL;
 	/// 释放数据帧对象指针
 	av_free(pFrame); pFrame = NULL;
 	av_free(pFrameYUV); pFrameYUV = NULL;

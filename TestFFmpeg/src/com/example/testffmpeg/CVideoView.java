@@ -77,7 +77,7 @@ public class CVideoView  extends View  implements Runnable  {
 	{
 		if(null == m_BitMap)
 		{
-			m_BitMap = Bitmap.createBitmap(m_nDisplayWidth, m_nDisplayHeight, Bitmap.Config.RGB_565);
+			m_BitMap = Bitmap.createBitmap(m_nDisplayWidth, m_nDisplayHeight, Bitmap.Config.ARGB_8888);
 			
 			Log.i("TestBMP", "m_nDisplayWidth = " + m_nDisplayWidth + ", m_nDisplayHeight = "
 					+ m_nDisplayHeight + ", BitMapCount = " + m_BitMap.getByteCount());
