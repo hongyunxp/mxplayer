@@ -41,17 +41,6 @@ char m_szURLPath[512];
 
 int iWidth = 0, iHeight = 0;
 
-int *colortab=NULL;
-int *u_b_tab=NULL;
-int *u_g_tab=NULL;
-int *v_g_tab=NULL;
-int *v_r_tab=NULL;
-
-unsigned int *rgb_2_pix=NULL;
-unsigned int *r_2_pix=NULL;
-unsigned int *g_2_pix=NULL;
-unsigned int *b_2_pix=NULL;
-
 static jclass		m_CallBackClass = NULL;
 static jmethodID 	m_CallBackQueueMethod = NULL;
 
@@ -106,13 +95,11 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 		 	jbyteArray byteArray = env->NewByteArray(nSize);
 		    /// 拷贝数据
 		 	env->SetByteArrayRegion(byteArray, 0, nSize, (jbyte* )pszBuffer);
-		 	/// 回调java中的方法
+		 	/// 回调java中的方法, m_CallBackQueueMethod 为 jmethodID 类型非 jobject 类型不需要释放引用数据
 		 	env->CallStaticVoidMethod(m_CallBackClass, m_CallBackQueueMethod , byteArray);
 		 	/// 释放本地数组引用
 		 	env->DeleteLocalRef(byteArray);
-		 	/// env->DeleteLocalRef(m_CallBackQueueMethod);
 		}
-
 		env->DeleteLocalRef(m_CallBackClass);
 	}
 }
@@ -161,11 +148,7 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
     m_BMPInfoHeader.colorUse = 0;
     m_BMPInfoHeader.colorImportant = 0;
     memcpy(pBMPData + sizeof(BmpHead), &m_BMPInfoHeader, sizeof(InfoHead));
-    /*LOGD("SaveFrame 1--------------->");
-	/// 回调数据到Java
-	e_DisplayCallBack(env, pBMPData, nBMPBufferLen);
 
-	LOGD("SaveFrame 2--------------->");*/
 	FILE* pFile = NULL;
 	char szFilename[32];
 	int y;
@@ -182,261 +165,6 @@ void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 	pBMPData = NULL;
 	LOGD("SaveFrame finshed--------------->");
 }
-
-
-/*void e_Decode_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
-{
-	int nRGBSize = nWidth * nHeight;
-	/// 新图像像素值
-	int nArrayBuffer[nRGBSize];
-
-	int i = 0, j = 0, yp = 0;
-	int uvp = 0, u = 0, v = 0;
-	for (j = 0, yp = 0; j < nHeight; j++)
-	{
-		uvp = nRGBSize + (j >> 1) * nWidth;
-		u = 0;
-		v = 0;
-
-		for (i = 0; i < nWidth; i++, yp++)
-		{
-			int y = (0xff & ((int) pYUVBuffer[yp])) - 16;
-			if (y < 0)
-				y = 0;
-			if ((i & 1) == 0)
-			{
-				v = (0xff & pYUVBuffer[uvp++]) - 128;
-				u = (0xff & pYUVBuffer[uvp++]) - 128;
-			}
-
-			int y1192 = 1192 * y;
-			int r = (y1192 + 1634 * v);
-			int g = (y1192 - 833 * v - 400 * u);
-			int b = (y1192 + 2066 * u);
-
-			if (r < 0) r = 0; else if (r > 262143) r = 262143;
-			if (g < 0) g = 0; else if (g > 262143) g = 262143;
-			if (b < 0) b = 0; else if (b > 262143) b = 262143;
-
-			nArrayBuffer[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
-		}
-	}
-	/// 回调数据
-	e_DisplayCallBack(env, (BYTE* )nArrayBuffer, nRGBSize * sizeof(int));
-}
-
-int g_v_table[256],g_u_table[256],y_table[256];
-int r_yv_table[256][256],b_yu_table[256][256];
-int inited = 0;
-
-void initTable()
-{
-	if(inited == 0)
-	{
-		inited = 1;
-		int m = 0,n=0;
-		for (; m < 256; m++)
-		{
-			g_v_table[m] = 833 * (m - 128);
-			g_u_table[m] = 400 * (m - 128);
-			y_table[m] = 1192 * (m - 16);
-		}
-		int temp = 0;
-		for (m = 0; m < 256; m++)
-		{
-			for (n = 0; n < 256; n++)
-			{
-				temp = 1192 * (m - 16) + 1634 * (n - 128);
-				if (temp < 0) temp = 0; else if (temp > 262143) temp = 262143;
-				r_yv_table[m][n] = temp;
-
-				temp = 1192 * (m - 16) + 2066 * (n - 128);
-				if (temp < 0) temp = 0; else if (temp > 262143) temp = 262143;
-				b_yu_table[m][n] = temp;
-			}
-		}
-	}
-}
-
-void e_DecodeButter_YUV420_ARGB888(JNIEnv* env, BYTE* pYUVBuffer, int nWidth, int nHeight)
-{
-	int nRGBSize = nWidth * nHeight;
-	/// 新图像像素值
-	int nArrayBuffer[nRGBSize];
-
-	initTable();
-
-	int i = 0, j = 0,yp = 0;
-	int uvp = 0, u = 0, v = 0;
-	for (j = 0, yp = 0; j < nHeight; j++)
-	{
-		uvp = nRGBSize + (j >> 1) * nWidth;
-		u = 0;
-		v = 0;
-		for (i = 0; i < nWidth; i++, yp++)
-		{
-			int y = (0xff & ((int) pYUVBuffer[yp]));
-			if (y < 0)
-				y = 0;
-			if ((i & 1) == 0)
-			{
-				v = (0xff & pYUVBuffer[uvp++]);
-				u = (0xff & pYUVBuffer[uvp++]);
-			}
-
-			int y1192 = y_table[y];
-			int r = r_yv_table[y][v];
-			int g = (y1192 - g_v_table[v] - g_u_table[u]);
-			int b = b_yu_table[y][u];
-
-			if (g < 0) g = 0; else if (g > 262143) g = 262143;
-
-			nArrayBuffer[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
-		}
-	}
-	/// 回调数据
-	e_DisplayCallBack(env, (BYTE* )nArrayBuffer, nRGBSize * sizeof(int));
-}
-
-void DeleteYUVTab()
-{
-	av_free(colortab);
-	colortab = NULL;
-
-	av_free(rgb_2_pix);
-	rgb_2_pix = NULL;
-	inited = 0;
-}
-
-
-void CreateYUVTab_16()
-{
-	if(inited == 0)
-	{
-		int i;
-		int u, v;
-
-		colortab = (int *)av_malloc(4*256*sizeof(int));
-		u_b_tab = &colortab[0*256];
-		u_g_tab = &colortab[1*256];
-		v_g_tab = &colortab[2*256];
-		v_r_tab = &colortab[3*256];
-
-		for (i=0; i<256; i++)
-		{
-			u = v = (i-128);
-
-			u_b_tab[i] = (int) ( 1.772 * u);
-			u_g_tab[i] = (int) ( 0.34414 * u);
-			v_g_tab[i] = (int) ( 0.71414 * v);
-			v_r_tab[i] = (int) ( 1.402 * v);
-		}
-
-		rgb_2_pix = (unsigned int *)av_malloc(3*768*sizeof(unsigned int));
-
-		r_2_pix = &rgb_2_pix[0*768];
-		g_2_pix = &rgb_2_pix[1*768];
-		b_2_pix = &rgb_2_pix[2*768];
-
-		for(i=0; i<256; i++)
-		{
-			r_2_pix[i] = 0;
-			g_2_pix[i] = 0;
-			b_2_pix[i] = 0;
-		}
-
-		for(i=0; i<256; i++)
-		{
-			r_2_pix[i+256] = (i & 0xF8) << 8;
-			g_2_pix[i+256] = (i & 0xFC) << 3;
-			b_2_pix[i+256] = (i ) >> 3;
-		}
-
-		for(i=0; i<256; i++)
-		{
-			r_2_pix[i+512] = 0xF8 << 8;
-			g_2_pix[i+512] = 0xFC << 3;
-			b_2_pix[i+512] = 0x1F;
-		}
-
-		r_2_pix += 256;
-		g_2_pix += 256;
-		b_2_pix += 256;
-	}
-}
-
-void DisplayYUV_16(unsigned int* pdst1, unsigned char* y, unsigned char* u, unsigned char* v,
-		int width, int height, int src_ystride, int src_uvstride, int dst_ystride)
-{
-	int i, j;
-	int r, g, b, rgb;
-
-	int yy, ub, ug, vg, vr;
-
-	unsigned char* yoff;
-	unsigned char* uoff;
-	unsigned char* voff;
-
-	unsigned int* pdst=pdst1;
-
-	int width2 = width/2;
-	int height2 = height/2;
-
-	if(width2>iWidth/2)
-	{
-		width2=iWidth/2;
-
-		y+=(width-iWidth)/4*2;
-		u+=(width-iWidth)/4;
-		v+=(width-iWidth)/4;
-	}
-
-	if(height2>iHeight)
-		height2=iHeight;
-
-	for(j=0; j<height2; j++) // 一次2x2共四个像素
-	{
-		yoff = y + j * 2 * src_ystride;
-		uoff = u + j * src_uvstride;
-		voff = v + j * src_uvstride;
-
-		for(i=0; i<width2; i++)
-		{
-			yy  = *(yoff+(i<<1));
-			ub = u_b_tab[*(uoff+i)];
-			ug = u_g_tab[*(uoff+i)];
-			vg = v_g_tab[*(voff+i)];
-			vr = v_r_tab[*(voff+i)];
-
-			b = yy + ub;
-			g = yy - ug - vg;
-			r = yy + vr;
-
-			rgb = r_2_pix[r] + g_2_pix[g] + b_2_pix[b];
-
-			yy = *(yoff+(i<<1)+1);
-			b = yy + ub;
-			g = yy - ug - vg;
-			r = yy + vr;
-
-			pdst[(j*dst_ystride+i)] = (rgb)+((r_2_pix[r] + g_2_pix[g] + b_2_pix[b])<<16);
-
-			yy = *(yoff+(i<<1)+src_ystride);
-			b = yy + ub;
-			g = yy - ug - vg;
-			r = yy + vr;
-
-			rgb = r_2_pix[r] + g_2_pix[g] + b_2_pix[b];
-
-			yy = *(yoff+(i<<1)+src_ystride+1);
-			b = yy + ub;
-			g = yy - ug - vg;
-			r = yy + vr;
-
-			pdst [((2*j+1)*dst_ystride+i*2)>>1] = (rgb)+((r_2_pix[r] + g_2_pix[g] + b_2_pix[b])<<16);
-		}
-	}
-}*/
 
 /*
  * Class:     com_example_testffmpeg_CFFmpegJni
@@ -566,9 +294,9 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 	pFrame = avcodec_alloc_frame();
 	pFrameYUV = avcodec_alloc_frame();
 	/// 创建转换数据缓冲
-	int nConvertSize = avpicture_get_size(PIX_FMT_RGB32, iWidth, iHeight);
+	int nConvertSize = avpicture_get_size(PIX_FMT_RGB565, iWidth, iHeight);
 	uint8_t* pConvertbuffer = new uint8_t[nConvertSize];
-	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_RGB32, iWidth, iHeight);
+	avpicture_fill((AVPicture *)pFrameYUV, pConvertbuffer, PIX_FMT_RGB565, iWidth, iHeight);
 
 	/// 声明解码参数
 	int nCodecRet, nHasGetPicture;
@@ -595,7 +323,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 			{
 				/// 格式化像素格式为YUV
 				img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-					iWidth, iHeight, PIX_FMT_RGB32, SWS_BICUBIC, NULL, NULL, NULL);
+					iWidth, iHeight, PIX_FMT_RGB565, SWS_BICUBIC, NULL, NULL, NULL);
 				/// 转换格式为YUV
 				sws_scale(img_convert_ctx, (const uint8_t* const* )pFrame->data, pFrame->linesize,
 						0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
@@ -608,7 +336,6 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 		/// 释放解码包，此数据包，在 av_read_frame 调用时被创建
 		av_free_packet(pAVPacket);
 	}
-
 	/// 释放转换图片缓存
 	delete[] pConvertbuffer;
 	pConvertbuffer = NULL;

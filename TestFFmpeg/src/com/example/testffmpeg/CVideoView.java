@@ -20,7 +20,7 @@ public class CVideoView  extends View  implements Runnable  {
 	private Bitmap m_BitMap;
 	
 	private byte[]	m_NativePixels = null;
-	private ByteBuffer m_BmpBuffer;
+	private ByteBuffer m_BmpBuffer = null;	
 	private Paint m_Paint = null;
 	
 	@SuppressWarnings("unused")
@@ -77,7 +77,7 @@ public class CVideoView  extends View  implements Runnable  {
 	{
 		if(null == m_BitMap)
 		{
-			m_BitMap = Bitmap.createBitmap(m_nDisplayWidth, m_nDisplayHeight, Bitmap.Config.ARGB_8888);
+			m_BitMap = Bitmap.createBitmap(m_nDisplayWidth, m_nDisplayHeight, Bitmap.Config.RGB_565);
 			
 			Log.i("TestBMP", "m_nDisplayWidth = " + m_nDisplayWidth + ", m_nDisplayHeight = "
 					+ m_nDisplayHeight + ", BitMapCount = " + m_BitMap.getByteCount());
@@ -105,9 +105,9 @@ public class CVideoView  extends View  implements Runnable  {
 		m_NativePixels = CVideoFrames.m_FrameDatas.poll();
     	if(null != m_NativePixels && 0 < m_NativePixels.length)
     	{
-    		m_BmpBuffer = ByteBuffer.wrap(m_NativePixels);
-        	m_BitMap.copyPixelsFromBuffer(m_BmpBuffer);
-    	}    	
+    		m_BmpBuffer = ByteBuffer.wrap(m_NativePixels);    		
+    		m_BitMap.copyPixelsFromBuffer(m_BmpBuffer);
+    	}
         canvas.drawBitmap(m_BitMap, 0, 0, m_Paint);
 	}
 
