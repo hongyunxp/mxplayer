@@ -26,8 +26,6 @@ extern "C" {
 #define FFMPEG_TAG "FFMPEG_TAG"
 #define MYLOG_TAG "TestNDK_DEBUG"
 
-#define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
-
 /// 定义全局变量
 AVFormatContext* m_pFormatCtx = NULL;
 
@@ -107,7 +105,7 @@ void e_DisplayCallBack(JNIEnv *env, BYTE* pszBuffer, int nSize)
 void e_SaveFrameToBMP(JNIEnv *env, AVFrame* pFrameRGB, int nWidth, int nHeight)
 {
 	/// 获取宽度的设置
-	int nWidthBytes = nWidth * 4;/// WIDTHBYTES(nWidth * 24);
+	int nWidthBytes = nWidth * 4;
 	int nBufferLen =  nWidthBytes * nHeight;
 
 	LOGD("%s, DateLen = %d", "SaveFrame 0--------------->", nBufferLen);

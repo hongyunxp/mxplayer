@@ -1,8 +1,6 @@
 #ifndef __LEE_ICER_RGBTOBMP_DATA_H_H__
 #define __LEE_ICER_RGBTOBMP_DATA_H_H__
 
-
-
 #include <stdio.h>
 typedef unsigned char  BYTE;
 typedef unsigned short WORD;
@@ -15,11 +13,15 @@ typedef unsigned short WORD;
     4byte   ：保留字，为0
     4byte   ：从文件头到实际的位图图像数据的偏移字节数。
 *************/
+#pragma pack(1)
 typedef struct
-{    long imageSize;
+{
+	WORD bfType;
+	long imageSize;
     long blank;
     long startPosition;
 }BmpHead;
+#pragma pack()
 /*********************
  
  /*********************
@@ -40,7 +42,8 @@ typedef struct
     4byte   ：本图像实际用到的颜色数，如果该值为0，则用到的颜色数为2的(颜色位数)次幂,如颜色位数为8，2^8=256,即256色的位图
     4byte   ：指定本图像中重要的颜色数，如果该值为0，则认为所有的颜色都是重要的。
 ***********************************/
- 
+
+#pragma pack(1)
 typedef struct
 {
     long    Length;
@@ -55,6 +58,7 @@ typedef struct
     long    colorUse;
     long    colorImportant;
 }InfoHead;
+#pragma pack()
 /***************************
 /***************************
     第三部分    调色盘结构  颜色表
