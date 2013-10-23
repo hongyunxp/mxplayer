@@ -105,7 +105,7 @@ public class CVideoView  extends View  implements Runnable  {
 		m_NativePixels = CVideoFrames.m_FrameDatas.poll();
     	if(null != m_NativePixels && 0 < m_NativePixels.length)
     	{
-    		m_BmpBuffer = ByteBuffer.wrap(m_NativePixels);    		
+    		m_BmpBuffer = ByteBuffer.wrap(m_NativePixels);
     		m_BitMap.copyPixelsFromBuffer(m_BmpBuffer);
     	}
         canvas.drawBitmap(m_BitMap, 0, 0, m_Paint);

@@ -2,8 +2,6 @@ package com.example.testffmpeg;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import android.util.Log;
-
 public class CVideoFrames {
 	
 	/// 声明数据队列
@@ -16,11 +14,9 @@ public class CVideoFrames {
 	public static void e_AddDataToQueue(byte[] pBufferData)
 	{
 		if(null != pBufferData)
-		{			
+		{
+			/// 增加要绘制的数据到Buffer
 			m_FrameDatas.add(pBufferData);
-			/// 打印日志
-			Log.d("e_AddDataToQueue", "Data Input To Queue Success! BufferSize = " + 
-					pBufferData.length + " FramQueue Size = " + m_FrameDatas.size());
 		}
 	}
 }

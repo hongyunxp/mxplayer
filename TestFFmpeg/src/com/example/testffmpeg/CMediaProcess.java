@@ -40,7 +40,7 @@ public class CMediaProcess implements Runnable{
 			/// 赋值正在播放状态
 			this.m_bIsPlaying = true;
 			/// 播放线程启动
-			m_DecoderTread = new Thread(this);			
+			m_DecoderTread = new Thread(this);
 			m_DecoderTread.start();
 		}
 	}
