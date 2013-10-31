@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:inputType="text"
         android:layout_below="@id/TextFileName"        
-        android:text="test.mp4"
+        android:text="rtsp://192.168.0.48/rm.264"
         />
     
    	<Button    
@@ -65,7 +65,7 @@
    	<SurfaceView 
    	    android:id="@+id/SFVideo"
    	    android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="300dp"
    	    android:layout_below="@id/BtnStart"
    	    android:layout_alignRight="@id/BtnStop"
    	    />
