@@ -198,7 +198,7 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IInit(JNIEnv *env, jobject thiz, jst
 	/// 设置rtsp为TCP方式
 	if(1 == jnMeidaType)
 	{
-		av_dict_set(&m_pDictOptions, "rtsp_transport", "tcp", 0);
+		/// av_dict_set(&m_pDictOptions, "rtsp_transport", "tcp", 0);
 	}
 	/// 初始化网络
 	nRet = avformat_network_init();
@@ -235,10 +235,10 @@ jint Java_com_example_testffmpeg_CFFmpegJni_IPlay(JNIEnv *env, jobject thiz)
 		m_pFormatCtx = NULL;
 	}
 
-	if(NULL == m_pFormatCtx && NULL != m_pDictOptions)
+	if(NULL == m_pFormatCtx)
 	{
 		/// 打开文件
-		if(0 != (nRet = avformat_open_input(&m_pFormatCtx, m_szURLPath, 0, &m_pDictOptions)))
+		if(0 != (nRet = avformat_open_input(&m_pFormatCtx, m_szURLPath, 0, NULL/*&m_pDictOptions*/)))
 		{
 			char szTemp[256];
 			memset(szTemp, 0x00, sizeof(szTemp));
