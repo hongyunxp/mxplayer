@@ -1,0 +1,13 @@
+LIBRARY	"NetClient"
+
+EXPORTS
+    ; 此处可以是显式导出
+e_ConnectionServer					@   1
+e_DisconnectServer					@   2
+e_SendDataByStruct					@   3
+e_GameTypeToChar					@   4
+e_CharToGameType					@   5
+e_SSCBetTypeToChar					@   6
+e_CharToSSCBetType					@	7
+e_XYNCBetTypeToChar					@	8
+e_CharToXYNCBetType					@	9
