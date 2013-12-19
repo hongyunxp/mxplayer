@@ -72,7 +72,7 @@ public:
 	/// [in,out]	<参数名>		<参数说明>
 	///	[in]		ulContextID		连接信息ID
 	/// [in]		pSendData		发送的数据
-	/// [in]		nDataLen		数据长度		
+	/// [in]		nDataLen		数据长度
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/22 
 	/// ==============================================

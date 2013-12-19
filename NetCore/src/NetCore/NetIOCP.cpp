@@ -1620,7 +1620,7 @@ bool CNetIOCP::e_GetIPAddrBySocket(SOCKET sClientSocket, char* pszClientIP, USHO
 	if(INVALID_SOCKET == sClientSocket || NULL == pszClientIP || 0 >= usStrSize)
 	{
 		END_DEBUG_INFO
-		return bRet; 
+		return bRet;
 	}
 	/// 获取指定客户端IP地址
 	sockaddr_in sockAddr;
