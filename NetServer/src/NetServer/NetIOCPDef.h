@@ -27,14 +27,15 @@
 class CNetBuffer;
 typedef map<ULONG, CNetBuffer*, greater<ULONG>>		CBufferMapToPtr;
 
+/// 最小网络数据缓冲包大小 Sizeof(UINT)
+#define MIN_NET_BUFFER_SIZE		4
+/// 最大网络数据缓冲包大小 1024 * 32 (32K)
+#define MAX_NET_BUFFER_SIZE		32768
+/// 最大网络数据包有效数据大小 MAX_NET_BUFFER_SIZE - MIN_NET_BUFFER_SIZE
+#define MAX_PAL_BUFFER_SIZE		32764
+
 /// 最大工作线程数量
 #define MAX_PROCESSER_NUMBERS	20
-/// 最小网络数据缓冲包大小 Sizeof(USHOT)
-#define MIN_NET_BUFFER_SIZE		2
-/// 最大网络数据缓冲包大小 1024 * 8
-#define MAX_NET_BUFFER_SIZE		8192
-/// 最大网络数据包有效数据大小
-#define MAX_PAL_BUFFER_SIZE		MAX_NET_BUFFER_SIZE - MIN_NET_BUFFER_SIZE
 /// 无固定空闲数量的列表
 #define	NO_NUM_FREE_LIST		0
 /// 连接池数量

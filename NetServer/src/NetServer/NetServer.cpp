@@ -78,6 +78,35 @@ bool CNetServer::e_ITCPSendData(ULONG ulContextID, BYTE* pSendData, int nDataLen
 	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
 }
 
+/*bool CNetServer::e_ITCPSendStringData(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+{
+	START_DEBUG_INFO
+	/// 验证数据合法性
+	if(NULL == pSendData || 0 >= nDataLen)
+	{
+		END_DEBUG_INFO
+		return false;
+	}
+	/// 发送数据
+	END_DEBUG_INFO
+	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
+}
+
+bool CNetServer::e_ITCPSendBData(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+{
+	START_DEBUG_INFO
+	/// 验证数据合法性
+	if(NULL == pSendData || 0 >= nDataLen)
+	{
+		END_DEBUG_INFO
+		return false;
+	}
+	/// 发送数据
+	END_DEBUG_INFO
+	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
+}
+*/
+
 bool CNetServer::e_IUDPSendData(const char* pszClientIP, USHORT usClientPort, BYTE* pSendData, int nDataLen)
 {
 	START_DEBUG_INFO

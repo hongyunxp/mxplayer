@@ -24,7 +24,7 @@
 
 #include "NetClient/NetClientDef.h"
 
-#define 
+#define MAXDATALEN
 
 /// 允许最多发送的缓冲数组长度
 #define MAXSENDBUFARR		1000			
@@ -39,15 +39,14 @@
 enum _eJobDataType
 {
 	JDT_None = 0,					///< 无工作类型
-	JDT_TextData,					///< 文本类型
-	JDT_StructData,					///< 结构体数据
-	JDT_ArrStructData,				///< 结构体数组数据
+	JDT_StringData,					///< 字符串类型
+	JDT_StructData,					///< 对象/结构体数据
 };
 
-/// 缓冲数据结构体
+/// 网络数据头结构体
 typedef struct _tBufferHead
 {
-	int				nTotalLen;		///< 数据总长度
+	int				nTotalLen;		///< 数据总长度(包含数据头和数据内容长度)
 	short			sDataType;		///< 数据类型			参见：_eJobDataType
 	int				nOBJType;		///< 对象数据类型		参见：_eCmdOBJType
 	int				nOBJSize;		///< 对象数据大小		
@@ -55,6 +54,7 @@ typedef struct _tBufferHead
 	short			sSNum;			///< 开始数量
 	short			sENum;			///< 结束数量
 	int				nFlag;			///< 标识符(请求/回复)
+	int				nReserved;		///< 预留扩展字段
 	char			cBuf;			///< 缓冲区数据(存放数据得一个字节)
 }T_BufferHead, *LP_BufferHead;
 
