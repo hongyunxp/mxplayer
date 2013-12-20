@@ -23,7 +23,7 @@
 
 #include "ContextList.h"
 #include "BufferPool.h"
-#include "NetCoreDef.h"
+#include "NetServerDef.h"
 
 class CNetIOCP
 {

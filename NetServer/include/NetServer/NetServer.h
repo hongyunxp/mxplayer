@@ -21,19 +21,19 @@
 #ifndef __LEE_NET_CORE_H_H__
 #define __LEE_NET_CORE_H_H__
 
-#include "NetCoreDef.h"
+#include "NetServerDef.h"
 
-#ifdef NETCORE_EXPORTS
-	#define NETCORE_API __declspec(dllexport)
+#ifdef NETSERVER_EXPORTS
+	#define NETSERVER_API __declspec(dllexport)
 #else
-	#define NETCORE_API __declspec(dllimport)
-#endif /// NETCORE_EXPORTS
+	#define NETSERVER_API __declspec(dllimport)
+#endif /// NETSERVER_EXPORTS
 
-class NETCORE_API CNetCore
+class NETSERVER_API CNetServer
 {
 public:
-	CNetCore();
-	virtual ~CNetCore();
+	CNetServer();
+	virtual ~CNetServer();
 
 	/// ==============================================
 	/// @par 功能 
@@ -102,6 +102,10 @@ public:
 	/// @note 		by li.xl 2013/06/28 
 	/// ==============================================
 	bool e_ICloseTCPContext(ULONG ulContextID);
+
+private:
+	/// 定义网络服务对象指针
+	void* m_pCNetProcess;
 };
 
 #endif	/// __LEE_NET_CORE_H_H__

@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{35FAD10F-A268-4346-B48B-D5CD587306B2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NetCore</RootNamespace>
+    <RootNamespace>NetServer</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -50,8 +50,8 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;NETCORE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Include\;..\..\Include\NetCore\;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;NETSERVER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Include\;..\..\Include\NetServer\;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -66,8 +66,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NETCORE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Include\;..\..\Include\NetCore\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NETSERVER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Include\;..\..\Include\NetServer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -82,8 +82,8 @@
     <ClInclude Include="..\..\Include\Common\AutoLock.h" />
     <ClInclude Include="..\..\Include\Common\CommTypes.h" />
     <ClInclude Include="..\..\Include\Common\_Debug.h" />
-    <ClInclude Include="..\..\Include\NetCore\NetCore.h" />
-    <ClInclude Include="..\..\Include\NetCore\NetCoreDef.h" />
+    <ClInclude Include="..\..\include\NetServer\NetServer.h" />
+    <ClInclude Include="..\..\include\NetServer\NetServerDef.h" />
     <ClInclude Include="BufferPool.h" />
     <ClInclude Include="NetBuffer.h" />
     <ClInclude Include="ContextList.h" />
@@ -94,8 +94,8 @@
     <ClCompile Include="BufferPool.cpp" />
     <ClCompile Include="NetBuffer.cpp" />
     <ClCompile Include="ContextList.cpp" />
-    <ClCompile Include="NetCore.cpp" />
     <ClCompile Include="NetIOCP.cpp" />
+    <ClCompile Include="NetServer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

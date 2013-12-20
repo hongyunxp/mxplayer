@@ -12,6 +12,9 @@
     <Filter Include="Common">
       <UniqueIdentifier>{a79004b9-f08b-42b3-9002-049d113b4660}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NetServer">
+      <UniqueIdentifier>{455b176d-0e09-4f41-86e4-bf5efcd1a570}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetIOCP.h">
@@ -38,18 +41,15 @@
     <ClInclude Include="BufferPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Include\NetCore\NetCore.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="..\..\include\NetServer\NetServer.h">
+      <Filter>NetServer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Include\NetCore\NetCoreDef.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="..\..\include\NetServer\NetServerDef.h">
+      <Filter>NetServer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetIOCP.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="NetCore.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ContextList.cpp">
@@ -59,6 +59,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="BufferPool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NetServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
