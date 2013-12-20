@@ -102,6 +102,8 @@
     <ClCompile Include="NetBase.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\common\AutoLock.h" />
+    <ClInclude Include="..\..\include\common\NetCoreDef.h" />
     <ClInclude Include="..\..\include\NetClient\NetClient.h" />
     <ClInclude Include="NetBaseDef.h" />
     <ClInclude Include="NetTreatMent.h" />

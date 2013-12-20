@@ -37,9 +37,6 @@
     <ClInclude Include="..\..\include\common\CommTypes.h">
       <Filter>Comm</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\NetClient\NetLotteryDef.h">
-      <Filter>Comm</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\NetClient\NetClientDef.h">
       <Filter>NetClient</Filter>
     </ClInclude>
@@ -52,10 +49,19 @@
     <ClInclude Include="NetBase.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\common\NetCoreDef.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\AutoLock.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\NetClient\NetLotteryDef.h">
+      <Filter>NetClient</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="NetClient.def">
-      <Filter>Comm</Filter>
+      <Filter>NetClient</Filter>
     </None>
   </ItemGroup>
 </Project>

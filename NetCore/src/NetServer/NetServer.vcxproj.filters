@@ -9,11 +9,11 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Common">
-      <UniqueIdentifier>{a79004b9-f08b-42b3-9002-049d113b4660}</UniqueIdentifier>
-    </Filter>
     <Filter Include="NetServer">
       <UniqueIdentifier>{455b176d-0e09-4f41-86e4-bf5efcd1a570}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Comm">
+      <UniqueIdentifier>{a79004b9-f08b-42b3-9002-049d113b4660}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -21,10 +21,10 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Include\Common\AutoLock.h">
-      <Filter>Common</Filter>
+      <Filter>Comm</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Include\Common\CommTypes.h">
-      <Filter>Common</Filter>
+      <Filter>Comm</Filter>
     </ClInclude>
     <ClInclude Include="NetIOCPDef.h">
       <Filter>头文件</Filter>
@@ -33,7 +33,7 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Include\Common\_Debug.h">
-      <Filter>Common</Filter>
+      <Filter>Comm</Filter>
     </ClInclude>
     <ClInclude Include="NetBuffer.h">
       <Filter>头文件</Filter>
@@ -46,6 +46,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\NetServer\NetServerDef.h">
       <Filter>NetServer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\NetCoreDef.h">
+      <Filter>Comm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -21,22 +21,16 @@
 #ifndef __LEE_NET_IOCP_DEF_H_H__
 #define __LEE_NET_IOCP_DEF_H_H__
 
-#include "Common\CommTypes.h"
-#include "Common\AutoLock.h"
+#include "Common/CommTypes.h"
+#include "Common/AutoLock.h"
+#include "common/NetCoreDef.h"
 
 class CNetBuffer;
 typedef map<ULONG, CNetBuffer*, greater<ULONG>>		CBufferMapToPtr;
 
-/// 最小网络数据缓冲包大小 Sizeof(UINT)
-#define MIN_NET_BUFFER_SIZE		4
-/// 最大网络数据缓冲包大小 1024 * 32 (32K)
-#define MAX_NET_BUFFER_SIZE		32768
-/// 最大网络数据包有效数据大小 MAX_NET_BUFFER_SIZE - MIN_NET_BUFFER_SIZE
-#define MAX_PAL_BUFFER_SIZE		32764
-
 /// 最大工作线程数量
 #define MAX_PROCESSER_NUMBERS	20
-/// 无固定空闲数量的列表
+/// 缓冲无固定空闲数量的列表
 #define	NO_NUM_FREE_LIST		0
 /// 连接池数量
 #define NETCORE_TCP_CONPOOL_NUM  1024
@@ -59,19 +53,19 @@ enum _eIOProcessType
 /// 客户端连接结构体
 typedef struct _tClientContext
 {	
-	ULONG					ulContextID;				///< 连接信息ID
-	SOCKET					sSocketID;					///< 连接套接字	
-	char					szClientIP[16];				///< 客户端连接IP
-	USHORT					usClientPort;				///< 客户端端口号
-	SHORT					sNumOfIORef;				///< IO引用计数
-	USHORT					usReadSeqNum;				///< 接收的序列号变量
-	USHORT					usSendSeqNum;				///< 发送的序列号变量
-	USHORT					usCurReadSeqNum;			///< 当前接收的序列号
-	USHORT					usCurSendSeqNum;			///< 当前接收的序列号
-	CLightCritSec			ContextCritSec;				///< 连接锁(修改或者读取时使用)
-	CBufferMapToPtr			CReadBufferMap;				///< 接收的缓冲乱序集合
-	CBufferMapToPtr			CSendBufferMap;				///< 接收的缓冲乱序集合
-	CNetBuffer*				pCurrentBuffer;				///< 当前处理缓冲数据
+	ULONG					ulContextID;			///< 连接信息ID
+	SOCKET					sSocketID;				///< 连接套接字	
+	char					szClientIP[16];			///< 客户端连接IP
+	USHORT					usClientPort;			///< 客户端端口号
+	SHORT					sNumOfIORef;			///< IO引用计数
+	USHORT					usReadSeqNum;			///< 接收的序列号变量
+	USHORT					usSendSeqNum;			///< 发送的序列号变量
+	USHORT					usCurReadSeqNum;		///< 当前接收的序列号
+	USHORT					usCurSendSeqNum;		///< 当前接收的序列号
+	CLightCritSec			ContextCritSec;			///< 连接锁(修改或者读取时使用)
+	CBufferMapToPtr			CReadBufferMap;			///< 接收的缓冲乱序集合
+	CBufferMapToPtr			CSendBufferMap;			///< 接收的缓冲乱序集合
+	CNetBuffer*				pCurrentBuffer;			///< 当前处理缓冲数据
 
 	/// 构造初始化
 	_tClientContext()

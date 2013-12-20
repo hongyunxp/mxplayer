@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\Include\Common\AutoLock.h" />
     <ClInclude Include="..\..\Include\Common\CommTypes.h" />
+    <ClInclude Include="..\..\include\common\NetCoreDef.h" />
     <ClInclude Include="..\..\Include\Common\_Debug.h" />
     <ClInclude Include="..\..\include\NetServer\NetServer.h" />
     <ClInclude Include="..\..\include\NetServer\NetServerDef.h" />
