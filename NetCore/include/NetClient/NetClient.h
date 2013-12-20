@@ -62,14 +62,13 @@ public:
 	/// 连接服务器(支持自动重连)
 	/// @param 
 	/// [in,out]	<参数名>			<参数说明>
-	/// [in]		usConnectType		连接服务类型(0 = 扫描连接IP， 1 = 首次连接指定IP，2 = 只连接指定IP)
 	/// [in]		pszServerIP			服务端IP
 	/// [in]		usServerPort		服务端口号
 	/// [in]		pfnRecvDataCallBack	接收数据回调事件
 	/// @return 	int						1 = 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_ConnectionServer(USHORT usConnectType, char* pszServerIP, USHORT usServerPort, 
+	int e_ConnectionServer(char* pszServerIP, USHORT usServerPort, 
 		OnRecvDataCallBack pfnRecvDataCallBack);
 
 	/// ==============================================
@@ -101,7 +100,7 @@ public:
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	/// [in]		unSSDType		对象/结构的定义类型
-	/// [in]		usOBJSize		对象/结构的大小
+	/// [in]		unOBJSize		对象/结构的大小
 	/// [in]		usOBJCount		对象/结构的个数
 	/// [in]		pSendData		要发送的数据内容
 	/// @return 	int				1 = 成功，小于等于0表示失败

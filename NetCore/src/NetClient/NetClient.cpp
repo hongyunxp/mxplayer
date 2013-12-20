@@ -3,21 +3,19 @@
 /// @par 模块名
 /// 处理接口函数调用
 /// @par 相关文件
-/// NetClient.cpp NetTreatMent.h
+/// NetClient.h NetTreatMent.h
 /// @par 功能详细描述
-/// <这里是本功能的详细描述，内容超过120个半角字符需要加反斜杠N换行接上一行内容>
 /// @par 多线程安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @par 异常时安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @note         -
-/// 
 /// @file         NetClient.cpp
-/// @brief        <模块功能简述>
+/// @brief        -
 /// @author       Li.xl
 /// @version      1.0
-/// @date         2011/06/08
-/// @todo         <将来要作的事情>
+/// @date         2013/12/20
+/// @todo         -
 /// 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -48,25 +46,8 @@ int CNetClient::e_ConnectionServer(UINT nServerPort, int nClientType,
 		return 0;
 	}
 
-	char szServiceIp[30];
-
-	memset(szServiceIp, 0x00, sizeof(szServiceIp));
-
-	bool bIsGetIp = false;
-
-	bIsGetIp = m_CNetTreatment.e_GetNetServiceIp(szServiceIp, sizeof(szServiceIp));
-
-	/// 连接网关服务
-	if(true == bIsGetIp)
-	{
-		/// 如果配置文件中配置了IP连接指定配置的IP
-		m_CNetTreatment.e_ConnectServer(szServiceIp, nServerPort, nClientType, 2);
-	}
-	else
-	{
-		m_CNetTreatment.e_ConnectServer(pszServerIp, nServerPort, nClientType, nConnectType);
-	}
-		
+	/// 如果配置文件中配置了IP连接指定配置的IP
+	m_CNetTreatment.e_ConnectServer(szServiceIp, nServerPort, nClientType, 2);		
 	/// 设置回调函数
 	m_CNetTreatment.e_SetReceiveDataCallBack(pReceiveDataCallBack);
 	/// 启动发送线程
@@ -92,12 +73,6 @@ int CNetClient::e_DisconnectServer()
 int CNetClient::e_SendDataByStruct(UINT nSSDType, UINT nStructSize, int nCount, void* pData)
 {
 	START_DEBUG_INFO
-	time_t tNow = time(NULL);
-	if(RST_STBSendTuchInfo != nSSDType && tNow - m_CNetTreatment.m_tSendTime < 5)
-	{
-		END_DEBUG_INFO
-		return -1;
-	}
 	/// 声明发送接收临时变量
 	T_RSStructData* pRecvClient = NULL;
 	/// 获取结构体数据大小

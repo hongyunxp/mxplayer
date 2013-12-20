@@ -1,1038 +1,558 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// 
 /// @par 模块名
-/// <幸运农场客户端通讯处理>
+/// FWAY客户端通讯处理
 /// @par 相关文件
-/// NetSocket.h 
+/// NetBase.h
 /// @par 功能详细描述
-/// <幸运农场客户端通讯处理>
 /// @par 多线程安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @par 异常时安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @note         -
-/// 
-/// @file         NetSocket.cpp
-/// @brief        <模块功能简述>
+/// @file         NetBase.cpp
+/// @brief        -
 /// @author       Li.xl
 /// @version      1.0
-/// @date         2011/05/25
-/// @todo         <将来要作的事情>
+/// @date         2013/12/20
+/// @todo         -
 /// 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "NetSocket.h"
 
-namespace FWAYNET
+#include "NetBase.h"
+
+CNetBase::CNetBase()
 {
-	/// 声明静态调用的全局类变量
-	CNetBase* m_pCCNetSocket = NULL;
-	CNetBase::CNetBase()
+	START_DEBUG_INFO
+	/// 初始化套接字
+	m_sClientTCPSocket = 0;
+	m_sClientUDPSocket = 0;
+	/// 初始化服务器IP
+	memset(m_szServerIP, 0x00, sizeof(m_szServerIP));
+	/// 初始化服务器端口号
+	m_usServerTCPPort = 0;
+	m_usClientUDPPort = 0;
+	/// 初始化线程句柄
+	m_HRecvThreadHandle = NULL;
+	m_HSendThreadHandle = NULL;
+	/// 初始化线程结束事件
+	m_HRecvStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_HSendStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	/// 初始化缓冲数组
+	m_SendBufferArray.clear();
+	/// 初始化回调函数
+	m_pfnRecDateCallBack = NULL;
+	/// 初始化连接服务器状态
+	m_bConnect = false;
+	END_DEBUG_INFO
+}
+
+CNetBase::~CNetBase()
+{
+	START_DEBUG_INFO
+	/// 停止发送线程
+	e_StopReceive();
+	/// 停止接收线程
+	e_StopSend();
+	/// 释放套接字
+	e_CloseSocket();
+	/// 清空发送的缓冲数组数据
+	i_DestroySendBufferArray();
+	END_DEBUG_INFO
+}
+
+bool CNetBase::e_ConnectServer(const char* pszServerIP, USHORT usServerPort)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	bool bRet = false;
+	/// 验证数据合法性
+	if(NULL == pszServerIP || 0 >= usServerPort)
 	{
-		START_DEBUG_INFO
-#ifdef WIN32
-		/// 定义Windows Sockets 初始化数据
-		WSADATA wsaData;
-		/// 初始化套接字Sockets获取初始化状态
-		m_nWSAInitResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-		/// 初始化接收线程ID
-		m_DRecvThreadId = NULL;
-		/// 初始化发送线程ID
-		m_DSendThreadId = NULL;
-#endif
-		/// 初始化套接字ID
-		m_nSocketId = 0;
-		/// 初始化停止接收标志
-		m_bStopRecvTag = false;
-		/// 初始化发送接收标志
-		m_bStopSendTag = false;
-		/// 初始化服务器IP
-		memset(m_szServerIp, 0x00, sizeof(m_szServerIp));
-		/// 初始化服务器端口号
-		m_nServerPort = 0;
-		/// 初始化连接服务器状态
-		m_bConnect = false;
-		/// 初始化回调函数
-		m_pReceiveStructCallBack = NULL;
-		/// 初始化缓冲数组
-		m_SendBufferArray.clear();
-		/// 初始化客户端类型
-		m_nClientType = CT_NoneError;
-		/// 赋值全局类变量
-		m_pCCNetSocket = this;
-		/// 初始化连接类型
-		m_nConnectType = 0;
+		return bRet;
+	}
+	/// 设置服务器IP
+	strncpy_s(m_szServerIP, pszServerIP, sizeof(m_szServerIP) - 1);
+	/// 设置服务端口号
+	m_usServerTCPPort = usServerPort;
+	END_DEBUG_INFO
+	return e_ReconnectServer();
+}
+
+bool CNetBase::e_CreatUDPClient(USHORT usClientUDPPort)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	bool bRet = false;
+	/// 验证数据合法性
+	if(0 >= usClientUDPPort)
+	{
+		return bRet;
+	}
+	/// 赋值UDP端口号
+	m_usClientUDPPort = usClientUDPPort;
+	/// 初始化UDP套接字
+	bRet = i_InitUDPSocket();
+	END_DEBUG_INFO
+	return bRet;
+}
+
+void CNetBase::e_SetReceiveDataCallBack(OnRecvDataCallBack pfnRecDataCallBack)
+{
+	START_DEBUG_INFO
+	/// 设置回调函数
+	m_pfnRecDateCallBack = pfnRecDataCallBack;
+	END_DEBUG_INFO
+}
+
+int CNetBase::e_SendTCPData(char* pszSendBuf, UINT nSendSize)
+{
+	START_DEBUG_INFO
+	int nRet = -1;
+	if(NULL == pszSendBuf || 0 >= nSendSize)
+	{
 		END_DEBUG_INFO
+		return nRet;
 	}
 
-	CNetBase::~CNetBase()
+	int nSendedlen = 0, nSendedSize = nSendSize;
+	int nSeletRet = SELECT_STATE_ERROR;
+	/// 直到发送完成或者退出循环
+	while(0 < nSendSize)
 	{
-		START_DEBUG_INFO
-	#ifdef WIN32
-		/// 套接字状态为错误，则断开套接字
-		if(NO_ERROR == m_nWSAInitResult)
+		nSeletRet = e_SelectProcess(m_sClientTCPSocket, SELECT_MODE_WRITE);
+
+		if(SELECT_STATE_READY == nSeletRet)
 		{
-			WSACleanup();
+			nSendedlen = send(m_sClientTCPSocket, pszSendBuf, nSendSize, 0);
+			/// 赋值发送数据大小
+			nSendSize -= nSendedlen;
+			pszSendBuf += nSendedlen;
 		}
-	#endif
-		/// 停止套接字连接，停止发送和接收线程
-		e_StopReceive();
-		e_StopSend();
-		/// 清空发送的缓冲数组数据
-		e_DestroySendBufferArray();
-		END_DEBUG_INFO
+		else if(SELECT_STATE_ERROR == nSeletRet)
+		{
+			printf("e_SendTCPData Error = %d\r\n", GetLastError());
+			END_DEBUG_INFO
+			return nRet;
+		}
+		else
+		{
+			/// 超时
+			END_DEBUG_INFO
+			continue;
+		}
+	}
+	END_DEBUG_INFO
+	return nSendedSize - nSendSize;
+}
+
+int CNetBase::e_SendUDPData(const char* pszRemoteIP, USHORT usRemotePort,
+	char* pszSendBuf, UINT nSendSize)
+{
+	/// 定义返回值
+	int nRet = -1;
+	/// 验证数据数据合法性
+	if(NULL == pszRemoteIP || 0 >= usRemotePort || NULL != pszSendBuf || 0 >= nSendSize)
+	{
+		return nRet;
 	}
 
-	bool CNetBase::e_IniSocket()
+	int nSelectState = e_SelectProcess(m_sClientUDPSocket, SELECT_MODE_WRITE);
+	/// 超时返回
+	if(SELECT_STATE_TIMEOUT == nSelectState || SELECT_STATE_ABORTED == nSelectState)
 	{
-		START_DEBUG_INFO
+		return 0;
+	}
+	else if(SELECT_STATE_READY == nSelectState)
+	{
+		/// 开始发送数据
+		sockaddr_in ClientAddr;
+		int nAddrSize = sizeof(ClientAddr);
+		ClientAddr.sin_family = AF_INET;
+		ClientAddr.sin_port = htons(usRemotePort);
+		ClientAddr.sin_addr.S_un.S_addr = inet_addr(pszRemoteIP);
+		nRet = sendto(m_sClientUDPSocket, pszSendBuf, nSendSize, 0,
+			(sockaddr *)&ClientAddr, nAddrSize);
+		nRet = (0 >= nRet) ? -1 : nRet;
+	}
+	return nRet;
+}
+
+void CNetBase::e_CloseSocket()
+{
+	/// 释放套接字
+	e_CloseTCPSocket();
+	e_CloseUDPSocket();
+}
+
+void CNetBase::e_CloseTCPSocket()
+{
+	START_DEBUG_INFO
+	/// 如果连接存在关闭连接
+	if(0 < m_sClientTCPSocket)
+	{
+		closesocket(m_sClientTCPSocket);
+	}
+	/// 套接字ID初始化为0
+	m_sClientTCPSocket = 0;
+	/// 连接状态设置为未连接
+	m_bConnect = false;
+	END_DEBUG_INFO
+}
+
+void CNetBase::e_CloseUDPSocket()
+{
+	START_DEBUG_INFO
+	/// 如果UDP套接字存在则关闭套接字
+	if(0 < m_sClientUDPSocket)
+	{
+		closesocket(m_sClientUDPSocket);
+	}
+	/// 套接字ID初始化为0
+	m_sClientUDPSocket = 0;
+	END_DEBUG_INFO
+}
+
+bool CNetBase::e_ReconnectServer()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	bool bRet = false;
+	/// 检查连接状态
+	if(true == m_bConnect)
+	{
 		/// 关闭套接字
-		e_CloseSocket();
-		/// 获取新的套接字
-		m_nSocketId = socket(AF_INET,SOCK_STREAM, 0);
-		/// 如果获取套接字成功,则处理
-		if(-1 != m_nSocketId)
-		{
-			/// 套接字相关设置操作在此处理
-			e_SetSocket(m_nSocketId);
-		}
-		else
-		{
-			m_nSocketId = 0;
-		}
+		e_CloseTCPSocket();
+	}
+	/// 清空发送缓冲数组数据
+	i_DestroySendBufferArray();
+
+	/// 连接服务Ip为空则返回
+	if(0 == strlen(m_szServerIP))
+	{
 		END_DEBUG_INFO
-		return (0 < m_nSocketId);
+		return bRet;
 	}
 
-	void CNetBase::e_SetSocket(int nSocketId)
+	struct sockaddr_in serverAddress;
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = inet_addr(m_szServerIP);
+	serverAddress.sin_port = htons(m_usServerTCPPort);
+	/// 如果TCP套接字无效
+	if(INVALID_SOCKET == m_sClientTCPSocket)
 	{
-		START_DEBUG_INFO
-		/// 如果套接字不存在直接返回
-		if(0 >= nSocketId)
+		if(false == i_InitTCPSocket())
 		{
 			END_DEBUG_INFO
-			return;
+			return bRet;
 		}
-
-		BOOL bSopt = TRUE;
-		int ret = 0;
-
-		int nBufferSize = 1024 * 64;
-		/// 立即发送数据
-		setsockopt(nSocketId, IPPROTO_TCP, TCP_NODELAY, (char *)&bSopt, sizeof(BOOL));
-#ifdef WIN32
-		/// 设置阻塞超时参数[60*1000] = 60s
-		int timeout = 60000;
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
-		/// 设置发送和接收套接字的缓冲大小
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_SNDBUF, (const char *)&nBufferSize, sizeof(int));
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_RCVBUF, (const char *)&nBufferSize, sizeof(int));
-#else
-		/// 设置阻塞超时参数60s
-		struct timeval timeout = {60, 0};
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-		nBufferSize = 1024 * 64;
-		/// 设置发送和接收套接字的缓冲大小
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_SNDBUF, &nBufferSize, sizeof(int));
-		ret = setsockopt(nSocketId, SOL_SOCKET, SO_RCVBUF, &nBufferSize, sizeof(int));
-#endif
-		END_DEBUG_INFO
 	}
-
-	void CNetBase::e_CloseSocket()
+	/// 连接服务器并返回连接状态(-1 = 连接不成功)
+	bRet = m_bConnect = (-1 != connect(m_sClientTCPSocket, (struct sockaddr *)&serverAddress,
+		sizeof(serverAddress)));
+	if(false == m_bConnect)
 	{
-		START_DEBUG_INFO
-		/// 如果连接存在关闭连接
-#ifdef WIN32
-		if(0 < m_nSocketId)
-		{
-			closesocket(m_nSocketId);
-		}
-#else
-		if(0 < m_nSocketId)
-		{
-			close(m_nSocketId);
-		}
-#endif
-		/// 套接字ID初始化为0
-		m_nSocketId = 0;
-		/// 连接状态设置为未连接
-		m_bConnect = false;
-		END_DEBUG_INFO
+		/// 连接失败，关闭套接字
+		e_CloseTCPSocket();
 	}
+	END_DEBUG_INFO
+	return bRet;
+}
 
-	bool CNetBase::e_ConnectServer(char* pszServerIp, int nServerPort, int nClientType, int nConnectType)
+bool CNetBase::e_IsConnect()
+{
+	START_DEBUG_INFO
+	/// 返回连接状态
+	END_DEBUG_INFO
+	return m_bConnect;
+}
+
+int CNetBase::e_StartReceive()
+{
+	START_DEBUG_INFO
+	/// 返回数据
+	int nResult = 0;
+	/// 申请接收线程
+	m_HRecvThreadHandle = CreateThread(NULL, 0, &i_ReceiveThread, this, 0, NULL);
+	END_DEBUG_INFO
+	return nResult;
+}
+
+int CNetBase::e_StartSend()
+{
+	START_DEBUG_INFO
+	int nResult = 0;
+	m_HSendThreadHandle = CreateThread(NULL, 0, &i_SendThread, this, 0, NULL);
+
+	END_DEBUG_INFO
+	return nResult;
+}
+
+void CNetBase::e_StopReceive()
+{
+	START_DEBUG_INFO
+	WaitForMultipleObjects(1, &m_HRecvThreadHandle, TRUE, INFINITE);
+	CloseHandle(m_HRecvThreadHandle);
+	END_DEBUG_INFO
+}
+
+void CNetBase::e_StopSend()
+{
+	START_DEBUG_INFO
+	/// 关闭发送数据线程
+	WaitForMultipleObjects(1, &m_HSendThreadHandle, TRUE, INFINITE);
+	CloseHandle(m_HSendThreadHandle);
+	END_DEBUG_INFO
+}
+
+DWORD WINAPI CNetBase::i_ReceiveThread(void* pBaseSocket)
+{
+	START_DEBUG_INFO
+	/// 启动接收线程
+	CNetBase* pThis = (CNetBase* )pBaseSocket;
+	pThis->e_ReceiveLoop();
+	END_DEBUG_INFO
+	return 0;
+}
+
+DWORD WINAPI CNetBase::i_SendThread(void* pBaseSocket)
+{
+	START_DEBUG_INFO
+	/// 启动发送线程
+	CNetBase* pThis = (CNetBase* )pBaseSocket;
+	pThis->e_SendLoop();
+	END_DEBUG_INFO
+	return 0;
+}
+
+int CNetBase::e_RecTCPData(char* pszRevBuffer, int nRevLength)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = -1;
+	/// 验证数据合法性
+	if(NULL == pszRevBuffer || 0 >= nRevLength)
 	{
-		START_DEBUG_INFO
-		/// 设置服务器IP
-		snprintf(m_szServerIp, sizeof(m_szServerIp), "%s", pszServerIp);
-		/// 设置服务端口号
-		m_nServerPort = nServerPort;
-		/// 设置客户端连接类型
-		m_nClientType = nClientType;
-		/// 设置连接类型
-		m_nConnectType = nConnectType;
-		/// 连接服务，返回连接状态
 		END_DEBUG_INFO
-		return e_ReconnectServer();
+		return nRet;
 	}
-
-	bool CNetBase::e_ReconnectServer()
+	int nSeletRet = SELECT_STATE_ERROR;
+	/// 数据长度
+	int nRecvedlen = 0, nCurrlen = 0;
+	while(0 < nRevLength)
 	{
-		START_DEBUG_INFO
-		/// 端口号未设置返回
-		if(0 == m_nServerPort)
+		nSeletRet = e_SelectProcess(m_sClientTCPSocket, SELECT_MODE_READY);
+		if(SELECT_STATE_READY == nSeletRet)
 		{
-			END_DEBUG_INFO
-			return false;
-		}
-		/// 检查连接状态
-		if(true == m_bConnect)
-		{
-			/// 关闭套接字
-			e_CloseSocket();
-		}
-		/// 清空发送缓冲数组数据
-		e_DestroySendBufferArray();
-
-		/// 扫描连接网关服务
-		if(0 == m_nConnectType)
-		{
-			/// 扫描连接服务器
-			if(false == e_ScanConnectServer())
+			nCurrlen = recv(m_sClientTCPSocket, pszRevBuffer + nRecvedlen, nRevLength, 0);
+			if(0 <= nCurrlen)
 			{
-				/// 扫描失败返回
-				printf("扫描连接服务器失败\r\n");
+				/// 赋值接收数据大小
+				nRecvedlen += nCurrlen;
+				nRevLength -= nCurrlen;
+			}
+			else
+			{
+				printf("e_RecTCPData Rev Error = %d\r\n", GetLastError());
 				END_DEBUG_INFO
-				return false;
+				return nRet;
 			}
 		}
-
-		/// 连接服务Ip为空则返回
-		if(0 == strlen(m_szServerIp))
+		else if(SELECT_STATE_ERROR == nSeletRet)
 		{
-			return false;
-		}
-
-		struct sockaddr_in serverAddress;
-		serverAddress.sin_family = AF_INET;
-		serverAddress.sin_addr.s_addr = inet_addr(m_szServerIp);
-		serverAddress.sin_port = htons(m_nServerPort);
-		if(0 == m_nSocketId)
-		{
-			if(false == e_IniSocket())
-			{
-				END_DEBUG_INFO
-				return false;
-			}
-		}
-		/// 睡眠20毫秒
-#ifdef WIN32
-		Sleep(20);
-#else
-		usleep(20000);
-#endif
-		/// 连接服务器并返回连接状态(-1 = 连接不成功)
-		m_bConnect = (connect(m_nSocketId, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) != -1);
-		if(false == m_bConnect)
-		{
-			static int ntick = 0;
-			ntick++;
-			if(10 < ntick || 2 != m_nConnectType)
-			{
-				ntick = 0;
-				printf("连接服务器IP = %s Port = %d 失败\r\n", m_szServerIp, m_nServerPort);
-			}
-			/// 首次连接指定Ip失败，自动赋值为扫描连接服务
-			if(1 == m_nConnectType)
-			{
-				m_nConnectType = 0;
-			}
-			/// 连接失败，关闭套接字
-			e_CloseSocket();
+			printf("e_RecTCPData Select Error = %d\r\n", GetLastError());
+			END_DEBUG_INFO
+			return nRet;
 		}
 		else
 		{
-			if(true == e_InitClient())
-			{
-				printf("连接服务器IP = %s Port = %d 成功\r\n", m_szServerIp, m_nServerPort);
-			}
-			else
-			{
-				/// 首次连接指定Ip失败，自动赋值为扫描连接服务
-				if(1 == m_nConnectType)
-				{
-					m_nConnectType = 0;
-				}
-				/// 设置连接状态
-				m_bConnect = false;
-				/// 连接失败，关闭套接字
-				e_CloseSocket();
-			}
-		}
-		END_DEBUG_INFO
-		return m_bConnect;
-	}
-
-	bool CNetBase::e_ScanConnectServer()
-	{
-		START_DEBUG_INFO
-		/// 获取网段地址
-		char szLocalIp[16];
-		memset(szLocalIp, 0x00, sizeof(szLocalIp));
-		/// 获取本机Ip
-		e_GetHostIP(szLocalIp);
-		/// 本机Ip失败
-		if(0 == strlen(szLocalIp))
-		{
+			/// 超时
 			END_DEBUG_INFO
-			return false;
+			continue;
 		}
+	}
+	END_DEBUG_INFO
+	return nRecvedlen;
+}
 
-		/// 获取Ip地址头
-		char* ptr = NULL;
-		ptr = strrchr(szLocalIp, '.');
-		if(NULL == ptr)
+int CNetBase::e_RecUDPData(char* pszRevBuffer, int nRevLength,
+	string& strRemoteIP, USHORT& usRemotePort)
+{
+	START_DEBUG_INFO
+	int nRet = -1;
+	/// 验证数据合法性
+	if(INVALID_SOCKET == m_sClientUDPSocket || NULL == pszRevBuffer || 0 >= nRevLength)
+	{
+		return nRet;
+	}
+
+	int nSelectState = e_SelectProcess(m_sClientUDPSocket, SELECT_MODE_READY);
+	/// 超时返回
+	if(SELECT_STATE_TIMEOUT == nSelectState || SELECT_STATE_ABORTED == nSelectState)
+	{
+		nRet = 0;
+		return nRet;
+	}
+	else if(SELECT_STATE_READY == nSelectState)
+	{
+		sockaddr_in ClientAddr;
+		int nAddrSize = sizeof(ClientAddr);
+		/// 开始接收数据
+		nRet = recvfrom(m_sClientUDPSocket, pszRevBuffer, nRevLength, 
+			0, (sockaddr* )&ClientAddr, &nAddrSize);
+		nRet = (0 > nRet) ? -1 : nRet;
+		/// 如果存在数据
+		if(0 < nRet)
 		{
-			/// Ip地址错误，返回假
-			END_DEBUG_INFO
-			return false;
+			strRemoteIP = inet_ntoa(ClientAddr.sin_addr);
+			usRemotePort = ntohs(ClientAddr.sin_port);
 		}
+	}
+	return nRet;
+}
 
-		/// 声明获取Ip头
-		char szBeginPartIp[16];
+int CNetBase::e_SelectProcess(HSOCKET sClientSocket, USHORT usMode, USHORT usProcessTimeOut)
+{
+	if(INVALID_SOCKET == sClientSocket)
+	{
+		return SELECT_STATE_ERROR;
+	}
+	fd_set fdSet;
+	fd_set *readSet, *writeSet;
+	/// 超时时间测试
+	timeval selectTimeout;
+	selectTimeout.tv_sec  = usProcessTimeOut;
+	selectTimeout.tv_usec = 0;
+	FD_ZERO(&fdSet);
+	FD_SET(sClientSocket, &fdSet);
+	readSet = (usMode & SELECT_MODE_READY) ? &fdSet : NULL;
+	writeSet = (usMode & SELECT_MODE_WRITE) ? &fdSet : NULL;
 
-		/// 声明扫描的Ip地址段
-		memset(szBeginPartIp, 0x00, sizeof(szBeginPartIp));
-		/// 赋值IP地址头
-		memcpy(szBeginPartIp, szLocalIp, ptr - szLocalIp + 1);
+	int nRet = select((int)sClientSocket + 1, readSet, writeSet, NULL, &selectTimeout);
 
-		/// 定义获取扫描到的Ip
-		char szServerIp[16];
-
-		/// 获取服务器Ip扫描端
-		int nScanBegIp = NETSERVERSTARIP;
-		int nScanEndIp = NETSERVERSTOPIP;
-
-		/// 循环Ip连接
-		for(int i = nScanBegIp; i <= nScanEndIp; i++)
+	if(1 == nRet)
+	{
+		return SELECT_STATE_READY;
+	}
+	else if(SOCKET_ERROR == nRet)
+	{
+		if(errno == EINTR)
 		{
-			memset(szServerIp, 0x00, sizeof(szServerIp));
-			/// 赋值扫描到的Ip
-			snprintf(szServerIp, sizeof(szServerIp), "%s%d", szBeginPartIp, i);
+			return SELECT_STATE_ABORTED;
+		}
+		return SELECT_STATE_ERROR;
+	} 
+	return SELECT_STATE_TIMEOUT;
+}
 
-			if(true == e_ConnectTest(szServerIp, 100000))
+void CNetBase::i_DestroySendBufferArray()
+{
+	START_DEBUG_INFO
+	/// 加锁发送数组缓冲
+	CAutoLock lckSendBuffer(&m_SendBufferLock);
+
+	/// 清空缓冲数组数据
+	T_BufferStruct* pBuffer = NULL;
+	for(int i = 0; i < (int)m_SendBufferArray.size(); i++)
+	{
+		pBuffer = (T_BufferStruct* )m_SendBufferArray.at(i);
+		if(NULL != pBuffer)
+		{
+			if(pBuffer->pBuf)
 			{
-				/// 赋值服务器Ip
-				snprintf(m_szServerIp, sizeof(m_szServerIp), "%s", szServerIp);
-				return true;
+				delete pBuffer->pBuf;
 			}
-		}
-		/// 返回连接状态
-		return false;
-	}
-
-	bool CNetBase::e_ConnectTest(char * pServerIp, int nConnectTimeOut)
-	{
-		START_DEBUG_INFO
-		/// 定义返回信息
-		bool	bReturn = false;
-		/// 定义测试连接的套接字Id
-		UINT	nTestSocketID = 0;
-		/// 定义获取的错误编码
-		int		nError = -1;
-
-		/// 设置连接结构体
-		struct sockaddr_in saddr; 
-		saddr.sin_family = AF_INET; 
-		saddr.sin_addr.s_addr = inet_addr(pServerIp);
-		saddr.sin_port = htons(m_nServerPort); 
-		/// 获取连接套接字
-		nTestSocketID = socket(AF_INET, SOCK_STREAM, 0);
-		/// 设置套接字错误
-		if(0 >= nTestSocketID)
-		{
-			END_DEBUG_INFO
-			return false; 
-		}
-		//设置非阻塞方式连接
-#ifdef WIN32
-		/// 设置连接方式
-		unsigned long lSetType = 1;
-		nError = ioctlsocket(nTestSocketID, FIONBIO, (unsigned long* )&lSetType);
-		/// 设置阻塞连接失败返回
-		if(SOCKET_ERROR == nError)
-		{
-			END_DEBUG_INFO
-			return false;
-		}
-#else
-		int flags = fcntl(nTestSocketID, F_GETFL, 0);
-		fcntl(nTestSocketID, F_SETFL, flags|O_NONBLOCK); 
-#endif
-		/// 测试扫描连接服务器
-		nError = connect(nTestSocketID, (struct sockaddr*)&saddr, sizeof(saddr));
-		if(-1 == nError)
-		{
-#ifndef WIN32
-			/// Linux下如果错误为EINPROGRESS 可能没有错误，只是连接还未完成
-			if(errno == EINPROGRESS)
-#endif
-			{
-				/// 设置处理连接超时的时间
-				struct timeval tv; 
-				fd_set writefds; 
-				tv.tv_sec = 0;
-				tv.tv_usec = nConnectTimeOut; 
-				FD_ZERO(&writefds); 
-				FD_SET(nTestSocketID, &writefds); 
-				if(0 < select(nTestSocketID + 1, NULL, &writefds, NULL, &tv))
-				{
-#ifndef WIN32
-					/// 下面的一句一定要，主要针对Linux防火墙
-					int nlen = sizeof(int);
-					getsockopt(nTestSocketID, SOL_SOCKET, SO_ERROR, &nError, (socklen_t *)&nlen);
-					if(0 == nError)
-					{
-						/// 连接成功
-						bReturn = true;
-					}
-					else
-					{
-						/// 连接失败
-						bReturn = false;
-					}
-#else
-					/// 设置成功返回真
-					bReturn = true;
-#endif
-				}
-				else
-				{
-					bReturn = false;
-				}
-			}
-#ifndef WIN32
-			else
-			{
-				/// 如果不是EINPROGRESS 错误，返回假
-				bReturn = false; 
-			}
-#endif
-		} 
-		else
-		{
-			/// 连接成功
-			bReturn = true;
-		}
-		/// 关闭测试连接套接字
-#ifdef WIN32
-		closesocket(nTestSocketID); 
-#else
-		close(nTestSocketID); 
-#endif
-		return bReturn; 
-	}
-
-	bool CNetBase::e_IsConnect()
-	{
-		START_DEBUG_INFO
-		/// 返回连接状态
-		END_DEBUG_INFO
-		return m_bConnect;
-	}
-
-	bool CNetBase::e_InitClient()
-	{
-		START_DEBUG_INFO
-		/// 定义返回变量
-		bool bReturn = false;
-		/// 定义客户端数据发送给网关服务
-		T_ClientPack sttClientPack;
-		/// 初始化结构体数据
-		memset(&sttClientPack, 0x00, sizeof(T_ClientPack));
-		/// 赋值客户端类型
-		sttClientPack.nClientType = m_nClientType;
-		/// 赋值套接字ID
-		sttClientPack.nClientID = 0;
-		/// 赋值客户端IP
-		e_GetHostIP(sttClientPack.szClientIp);
-		/// 声明发送接收临时变量
-		T_RSStructData* pRecvClient = NULL;
-
-		/// 获取结构体大小
-		UINT nStructSize = sizeof(T_ClientPack);
-		/// 获取数据包大小
-		UINT nAllSize = sizeof(T_RSStructData) + nStructSize - 1;
-		/// 获取缓冲数据
-		pRecvClient = (T_RSStructData*)new char[nAllSize];
-		/// 赋值数据包
-		pRecvClient->nClientType = m_nClientType;
-		pRecvClient->nJobDataType = JDT_StructData;
-		pRecvClient->nSRStructType = RST_ClientPack;
-		pRecvClient->nDataSize = nStructSize;
-		pRecvClient->nDataCount = 1;
-		pRecvClient->nErrorCode = ECT_None;
-		memcpy(pRecvClient->szData, &sttClientPack, nStructSize);
-		/// 发送数据
-		bReturn = e_SendStructData(JDT_StructData, RST_ClientPack, nAllSize, pRecvClient);
-		if(NULL != pRecvClient)
-		{
-			delete pRecvClient;
-		}
-		pRecvClient = NULL;
-
-		END_DEBUG_INFO
-		return bReturn;
-	}
-
-	int CNetBase::e_StartReceive()
-	{
-		START_DEBUG_INFO
-		/// 返回数据
-		int nResult = 0;
-		/// 申请接收线程
-#ifdef WIN32
-		m_HRecvThreadHandle = CreateThread(NULL, 0, &i_ReceiveThread, this, 0, &m_DRecvThreadId);
-#else
-		pthread_mutex_init(&m_pCCNetSocket->m_RecvThreadMutex, 0);
-		nResult = pthread_create(&m_pCCNetSocket->m_RecvThreadTaskId, 0, i_ReceiveThread, this);
-#endif
-		END_DEBUG_INFO
-		return nResult;
-	}
-
-	int CNetBase::e_StartSend()
-	{
-		int nResult = 0;
-#ifdef WIN32
-		m_HSendThreadHandle = CreateThread(NULL, 0, &i_SendThread, this, 0, &m_DSendThreadId);
-#else
-		pthread_mutex_init(&m_pCCNetSocket->m_SendThreadMutex, 0);
-		nResult = pthread_create(&m_pCCNetSocket->m_SendThreadTaskId, 0, i_SendThread, this);
-#endif
-		END_DEBUG_INFO
-		return nResult;
-	}
-
-	void CNetBase::e_StopReceive()
-	{
-		START_DEBUG_INFO
-		/// 赋值结束接收标志
-		m_bStopRecvTag = true;
-		/// 关闭套接字连接
-		e_CloseSocket();
-
-		/// 关闭接收数据线程
-#ifdef WIN32
-		WaitForMultipleObjects(1, &m_HRecvThreadHandle, TRUE, INFINITE);
-		CloseHandle(m_HRecvThreadHandle);
-#else
-		int	nTemp = 0;
-		usleep(200);
-		while(true)
-		{
-			if(EBUSY == pthread_mutex_trylock(&m_pCCNetSocket->m_RecvThreadMutex))
-			{
-				nTemp++;
-				if(10 == nTemp)
-				{
-					pthread_cancel(m_RecvThreadTaskId);
-					break;
-				}
-				usleep(200);
-			}
-			else
-			{
-				break;
-			}
-		}
-		pthread_join(m_RecvThreadTaskId, 0);
-		pthread_mutex_destroy(&m_pCCNetSocket->m_RecvThreadMutex);
-#endif
-		END_DEBUG_INFO
-	}
-
-	void CNetBase::e_StopSend()
-	{
-		START_DEBUG_INFO
-		/// 赋值结束发送标志
-		m_bStopSendTag = true;
-		/// 关闭套接字连接
-		e_CloseSocket();
-		/// 关闭发送数据线程
-#ifdef WIN32
-		WaitForMultipleObjects(1, &m_HSendThreadHandle, TRUE, INFINITE);
-		CloseHandle(m_HSendThreadHandle);
-#else
-		int	nTemp = 0;
-		usleep(200);
-		while(true)
-		{
-			if(EBUSY == pthread_mutex_trylock(&m_pCCNetSocket->m_SendThreadMutex))
-			{
-				nTemp++;
-				if(10 == nTemp)
-				{
-					pthread_cancel(m_SendThreadTaskId);
-					break;
-				}
-				usleep(200);
-			}
-			else
-			{
-				break;
-			}
-		}
-		pthread_join(m_SendThreadTaskId, 0);
-		pthread_mutex_destroy(&m_pCCNetSocket->m_SendThreadMutex);
-#endif
-		END_DEBUG_INFO
-	}
-
-#ifdef WIN32
-	DWORD WINAPI CNetBase::i_ReceiveThread(void* pBaseSocket)
-	{
-#else
-	void *CNetBase::i_ReceiveThread(void* pBaseSocket)
-	{
-#endif
-		START_DEBUG_INFO
-		/// 启动接收线程
-		CNetBase* pSocket = (CNetBase* )pBaseSocket;
-#ifndef WIN32
-		pthread_mutex_lock(&m_pCCNetSocket->m_RecvThreadMutex);
-#endif
-		pSocket->e_ReceiveLoop();
-#ifndef WIN32
-		pthread_mutex_unlock(&m_pCCNetSocket->m_RecvThreadMutex);
-#endif
-		END_DEBUG_INFO
-		return 0;
-	}
-
-#ifdef WIN32
-	DWORD WINAPI CNetBase::i_SendThread(void* pBaseSocket)
-	{
-#else
-	void *CNetBase::i_SendThread(void* pBaseSocket)
-	{
-#endif
-		START_DEBUG_INFO
-		/// 启动发送线程
-		CNetBase* pSocket = (CNetBase* )pBaseSocket;
-#ifndef WIN32
-		pthread_mutex_lock(&m_pCCNetSocket->m_SendThreadMutex);
-#endif
-		pSocket->e_SendLoop();
-#ifndef WIN32
-		pthread_mutex_unlock(&m_pCCNetSocket->m_SendThreadMutex);
-#endif
-		END_DEBUG_INFO
-		return 0;
-	}
-
-	bool CNetBase::e_SendStructData(int nJobType, int nSST, long lStructLen, void* pStructData)
-	{
-		START_DEBUG_INFO
-		/// 检查连接
-		if(false == m_bConnect)
-		{
-			printf("服务器断开连接\n");
-			END_DEBUG_INFO
-			return false;
-		}
-
-		/// 发送数据加锁
-		CLightAutoLock lckSendBufferLock(&m_SendBufferLock);
-
-		if(MAXSENDBUFARR < (int)m_SendBufferArray.size())
-		{
-			printf("发送缓冲区数据太多\n");
-			END_DEBUG_INFO
-			return false;
-		}
-
-		/// 请求一个缓冲数据
-		T_BufferStruct* pBuffer = new T_BufferStruct();
-		if(NULL == pBuffer)
-		{
-			END_DEBUG_INFO
-			return false;
-		}
-		/// 初始化缓冲数据
-		memset(pBuffer, 0x00, sizeof(T_BufferStruct));
-
-		/// 缓冲数据设置
-		pBuffer->nJobType = nJobType;
-		pBuffer->nSST = nSST;
-		pBuffer->nSize = lStructLen;
-		pBuffer->pBuf = new char[lStructLen + 1024];
-		if(NULL == pBuffer->pBuf)
-		{
 			delete pBuffer;
-			END_DEBUG_INFO
-			return false;
+			pBuffer = NULL;
 		}
-		/// 赋值发送数据
-		memcpy(pBuffer->pBuf, pStructData, lStructLen);
-		m_SendBufferArray.push_back(pBuffer);
+	}
+	m_SendBufferArray.clear();
+	END_DEBUG_INFO
+}
+
+bool CNetBase::i_InitTCPSocket()
+{
+	START_DEBUG_INFO
+	/// 关闭TCP套接字
+	e_CloseTCPSocket();
+	/// 获取新的套接字
+	m_sClientTCPSocket = socket(AF_INET,SOCK_STREAM, 0);
+	/// 如果获取套接字成功,则处理
+	if(INVALID_SOCKET != m_sClientTCPSocket)
+	{		
+		///设置立即发送数据
+		int nRetLay = 1;
+		setsockopt(m_sClientTCPSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&nRetLay, sizeof(int));
+		/// 缓冲区大小
+		int nBufferSize = 1024 * 64;
+		/// 设置发送和接收套接字的缓冲大小
+		setsockopt(m_sClientTCPSocket, SOL_SOCKET, SO_SNDBUF, (const char *)&nBufferSize, sizeof(int));
+		setsockopt(m_sClientTCPSocket, SOL_SOCKET, SO_RCVBUF, (const char *)&nBufferSize, sizeof(int));
+	}
+	else
+	{
+		m_sClientTCPSocket = 0;
+	}
+	END_DEBUG_INFO
+	return (0 < m_sClientTCPSocket);
+}
+
+bool CNetBase::i_InitUDPSocket()
+{
+	START_DEBUG_INFO
+	bool bRet = false;
+	/// 创建套接字
+	m_sClientUDPSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if(INVALID_SOCKET == m_sClientUDPSocket)
+	{
 		END_DEBUG_INFO
-		return true;
+		return bRet;
 	}
 
-	void CNetBase::e_BuildBuffer(UINT nJobType, UINT nSST, long lStructLen,
-		void* pStructData, char* pBuffer, long* plSendLen)
+	/// 设置为socket重用,防止服务器崩溃后端口能够尽快再次使用或共其他的进程使用
+	int nOpt = 1;
+	int nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOpt, sizeof(int));
+	if(SOCKET_ERROR == nError)
 	{
-		START_DEBUG_INFO
-		long DataLen = 0;
-		long lngTmp = 0;
-		long lngSizeOfDataLen = 0;
-		DataLen = sizeof(char) + sizeof(lStructLen) + lStructLen;
-		/// 加入数据长度
-		memcpy(pBuffer, &DataLen, sizeof(DataLen));
-		lngSizeOfDataLen = sizeof(DataLen);
-		lngTmp = nJobType;
-		/// 加入业务类型
-		pBuffer[lngSizeOfDataLen] = (char)lngTmp;
-		lngTmp = nSST;
-		/// 加入结构类型
-		memcpy(&pBuffer[lngSizeOfDataLen + sizeof(char)], &lngTmp, sizeof(lngTmp));
-		if(NULL != pStructData)
-		{
-			/// 加入结构数据
-			memcpy(&pBuffer[lngSizeOfDataLen + sizeof(char) + sizeof(lngTmp)], pStructData, lStructLen);
-		}
-		*plSendLen = lngSizeOfDataLen + sizeof(char) + sizeof(lngTmp) + lStructLen;
 		END_DEBUG_INFO
+		return bRet;
 	}
 
-	bool CNetBase::e_SendStruct(HSOCKET s, UINT nJobType, UINT nSST, long lStructLen, void* pStructData)
+	/// = 设置接收数据缓冲
+	/// = 2M Byte 1000Mbps的network在0.01秒内最高可以接收到1.25MB数据
+	int nSendBufVal = (int)(1024 * 1024 * 1.25);
+	nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_RCVBUF, (char*)&nSendBufVal, sizeof(nSendBufVal));
+	if(nError == SOCKET_ERROR)
 	{
-		START_DEBUG_INFO
-		long lSendLen = 0;
-		/// 发送的BYTE大小
-		int nNumBytes;
-		char* pBuffer = NULL;
-		if(0 < s)
-		{
-			pBuffer = new char[lStructLen + 1024];
-			if(NULL != pBuffer)
-			{
-				memset(pBuffer, 0x00, lStructLen + 1024);
-				/// 数据打包
-				e_BuildBuffer(nJobType, nSST, lStructLen, pStructData, pBuffer, &lSendLen);
-				if(-1 == (nNumBytes = e_SendData(s, pBuffer, lSendLen)))
-				{
-					if(NULL != pBuffer)
-					{
-						delete[] pBuffer;
-						pBuffer = NULL;
-					}
-					END_DEBUG_INFO
-					return false;
-				}
-				if(NULL != pBuffer)
-				{
-					delete[] pBuffer;
-					pBuffer = NULL;
-				}
-				END_DEBUG_INFO
-				return true;
-			}
-		}
 		END_DEBUG_INFO
-		return false;
+		return bRet;
 	}
 
-	int CNetBase::e_SendData(HSOCKET s, char* pszBuf, UINT nsize)
+	/// = 设置发送数据缓冲
+	nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_SNDBUF, (char*)&nSendBufVal, sizeof(nSendBufVal));
+	if(nError == SOCKET_ERROR)
 	{
-		START_DEBUG_INFO
-		if(NULL == pszBuf)
-		{
-			END_DEBUG_INFO
-			return -1;
-		}
-		/// 重试次数
-		int nTryCount = 0;
-		/// 失败重试次数
-		int nTryDoCount = 0;
-		int nsize1, nlen;
-		nsize1 = nsize;
-		while(0 < nsize) 
-		{
-			nlen = send(s, pszBuf, nsize, 0);
-			if(0 > nlen) 
-			{
-#ifndef WIN32
-				int err = errno;
-#else
-				int err = GetLastError();
-#endif
-				if(10055 == err)
-				{
-#ifndef WIN32
-					usleep(1000);
-#else
-					Sleep(10);
-#endif
-					printf("缓冲已满\n");
-					nTryDoCount++;
-					if(10 < nTryDoCount)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					continue;
-				}
-				else if(10060 == err)
-				{
-					/// 发送超时，断线重连
-					e_CloseSocket();
-					END_DEBUG_INFO
-					return -1;
-				}
-				else if(EINTR == err)
-				{
-#ifndef WIN32
-					usleep(1000);
-#else
-					Sleep(10);
-#endif
-					printf("Socket EINTR\n");
-					nTryDoCount++;
-					if(10 < nTryDoCount)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					continue;
-				}
-				else if(EAGAIN == err)
-				{
-					nTryCount++;
-					printf("发送数据失败重试次数 = %i\n", nTryCount);
-					if(2 <= nTryCount)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					else
-					{
-						continue;
-					}
-				}
-				else 
-				{
-					printf("发送套接字数据错误 = %i\n", err);
-					END_DEBUG_INFO
-					return -1;
-				}
-			}
-			nsize -= nlen;
-			pszBuf += nlen;
-			nTryDoCount = 0;
-		}
 		END_DEBUG_INFO
-		return nsize1-nsize;
-	}
-	
-	long CNetBase::e_ReceiveData(int nSocketId, char* pReceiveBuffer, long lRevLength)
-	{
-		START_DEBUG_INFO
-		if(NULL == pReceiveBuffer)
-		{
-			END_DEBUG_INFO
-			return -1;
-		}
-		/// 数据长度
-		int nRecvLen = lRevLength;
-		/// 重试次数
-		int nTryCount = 0;
-		/// 失败重试次数
-		int nTryDoCount = 0;
-		while(0 < lRevLength)
-		{
-			int nlen = recv(nSocketId, pReceiveBuffer, lRevLength, 0);
-			if(0 >= nlen)
-			{
-#ifndef WIN32
-				int nErr = errno;
-#else
-				int nErr = GetLastError();
-#endif
-				if(10055 == nErr)
-				{
-#ifndef WIN32
-					usleep(1000);
-#else
-					Sleep(5);
-#endif
-					printf("缓冲已满\n");
-					if(nTryDoCount++ > 10)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					continue;
-				}
-				else if(EINTR == nErr)
-				{
-#ifndef WIN32
-					usleep(1000);
-#else
-					Sleep(5);
-#endif
-					printf("Socket EINTR\n");
-					nTryDoCount++;
-					if(10 < nTryDoCount)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					continue;
-				}
-				else if(EAGAIN == nErr)
-				{
-					nTryCount++;
-					printf("接收数据失败重试次数=%i\n", nTryCount);
-					if(2 <= nTryCount)
-					{
-						END_DEBUG_INFO
-						return -1;
-					}
-					continue;
-				}
-				else 
-				{
-					printf("接收数据错误[%i]\n", nErr);
-					END_DEBUG_INFO
-					return -1;
-				}
-			}
-			else 
-			{
-				lRevLength -= nlen;
-				pReceiveBuffer += nlen;
-				nTryDoCount = 0;
-			}
-		}
-		END_DEBUG_INFO
-		return nRecvLen;
+		return bRet;
 	}
 
-	void CNetBase::e_DestroySendBufferArray()
+	ULONG nonBlock = 1;
+	if (ioctlsocket(m_sClientUDPSocket, FIONBIO, &nonBlock)) 
 	{
-		START_DEBUG_INFO
-		/// 加锁发送数组缓冲
-		CLightAutoLock lckSendBuffer(&m_SendBufferLock);
-
-		/// 清空缓冲数组数据
-		T_BufferStruct* pBuffer = NULL;
-		for(int i = 0; i < (int)m_SendBufferArray.size(); i++)
-		{
-			pBuffer = (T_BufferStruct* )m_SendBufferArray.at(i);
-			if(NULL != pBuffer)
-			{
-				if(pBuffer->pBuf)
-				{
-					delete pBuffer->pBuf;
-				}
-				delete pBuffer;
-				pBuffer = NULL;
-			}
-		}
-		m_SendBufferArray.clear();
 		END_DEBUG_INFO
+		return bRet;
 	}
 
-	void CNetBase::e_GetHostIP(char* pszHostIp)
+	/// 绑定套接口
+	SOCKADDR_IN AddrLocal;
+	AddrLocal.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	AddrLocal.sin_family = AF_INET;
+	AddrLocal.sin_port = htons(m_usClientUDPPort);
+	nError = bind(m_sClientUDPSocket, (struct sockaddr *)&AddrLocal, sizeof(SOCKADDR_IN));
+	if(SOCKET_ERROR == nError)
 	{
-		START_DEBUG_INFO
-#ifdef _NC_WINDOWS_PLATFORM_
-		char  szName[256];
-		memset(szName, 0x00, sizeof(szName));
-		/// 获取主机名称
-		if(0 == gethostname(szName, 256))
-		{
-			PHOSTENT  ptHostInfo;
-			/// 根据主机名获取Ip地址
-			if(NULL != (ptHostInfo = gethostbyname(szName)))
-			{
-				LPCSTR pcIP = inet_ntoa(*(struct in_addr *)*ptHostInfo->h_addr_list);
-				snprintf(pszHostIp, 16, "%s", pcIP);
-			}
-		}
-#else
-		int nFd, nIntrface, nRetn = 0;
-		struct ifreq  tBuf[16];
-		struct ifconf tIfc;
-		if((nFd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0) 
-		{
-			tIfc.ifc_len = sizeof tBuf;
-			tIfc.ifc_buf = (caddr_t)tBuf;
-			if(0 == ioctl(nFd, SIOCGIFCONF, (char* )&tIfc)) 
-			{
-				nIntrface = tIfc.ifc_len / sizeof(struct ifreq);
-				while(nIntrface-- > 0)
-				{
-					/// 操作读取到的网络设备
-					if(!(ioctl(nFd, SIOCGIFFLAGS, (char *) &tBuf[nIntrface]))) 
-					{
-						if(tBuf[nIntrface].ifr_flags & IFF_PROMISC) 
-						{
-							nRetn++;
-						}
-					} 
-					else 
-					{
-						char szTemp[256];
-						sprintf(szTemp, "Ioctl device %s出错！", tBuf[nIntrface].ifr_name);
-						//D_ERROR(szTemp);
-					}
-					/// 是否等到了网卡状态
-					if(tBuf[nIntrface].ifr_flags & IFF_UP) 
-					{
-					}
-					/// 从网卡中获取IP地址
-					if(0 == (ioctl(nFd, SIOCGIFADDR, (char *)&tBuf[nIntrface])))
-					{
-						/// 获取Ip地址
-						char* pcIpData = inet_ntoa(((struct sockaddr_in*)
-							(&tBuf[nIntrface].ifr_addr))->sin_addr);
-						if(0 != strcmp(pcIpData, "127.0.0.1"))
-						{
-							/// 过滤本地地址ip信息
-							strcpy(pszHostIp, pcIpData);
-							printf("pszHostIp = %s\r\n", pszHostIp);
-						}
-					}
-					else 
-					{
-						char szTemp[256];
-						sprintf(szTemp, "Ioctl device %s出错！", tBuf[nIntrface].ifr_name);
-						//D_ERROR(szTemp);
-					}
-				}
-			} 
-			else
-			{
-				//D_ERROR("Ioctl出错！");
-			}
-		}
-		else
-		{
-			//D_ERROR("Socket出错！");
-		}
-		close (nFd);
-#endif
 		END_DEBUG_INFO
+		return bRet;
 	}
-
-	void CNetBase::e_SetReceiveDataCallBack(OnRecvDataCallBack pReceiveStructCallBack)
-	{
-		START_DEBUG_INFO
-		/// 设置回调函数
-		m_pReceiveStructCallBack = pReceiveStructCallBack;
-		END_DEBUG_INFO
-	}
+	return true;
 }

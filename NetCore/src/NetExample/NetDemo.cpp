@@ -2,16 +2,9 @@
 //
 
 #include "Common/CommTypes.h"
-#include "Common/AutoLock.h"
-#include "NetCore.h"
-#include "Common/LogFile.h"
-#include "common/xml/Markup.h"
+#include "NetServer/NetServer.h"
 
-
-/// 获取日志打印数据
-CLogFileEx* m_pLogFile = new CLogFileEx("Log/NetDemo", CLogFileEx :: DAY);
-
-CNetCore m_CNetCore;
+CNetServer m_NetServer;
 
 typedef struct _tTestStruct
 {
@@ -28,51 +21,23 @@ static void e_PrintLog(const char* pszfmt, ...)
 	memset(szTmp, 0x00, sizeof(szTmp));
 	vsnprintf_s(szTmp, sizeof(szTmp) - 1, pszfmt, argptr);
 	va_end(argptr);
-
-	if(NULL != m_pLogFile)
-	{
-		m_pLogFile->Log(szTmp);
-	}
-	else
-	{
-		printf("%s\r\n", szTmp);
-	}
+	printf("%s\r\n", szTmp);
 }
 
 
 /// 处理接收数据
-static void e_OnRecvDataCallBack(USHORT usNetDataType, ULONG ulContextID,
-	const char* pszClientIP, USHORT usClientPort, void* pData, int nDatalen)
+static void e_OnRecvDataCallBack(USHORT usNetType, ULONG ulContextID, const char* pszClientIP, 
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount, 
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
 {
 	START_DEBUG_INFO;
 	/// 收到TCP数据
-	if(NDT_TCPData == usNetDataType)
+	if(NTT_TCPData == usNetType)
 	{
-		//char szTemp[2048];
-		//memset(szTemp, 0x00, sizeof(szTemp));
-		//memcpy(szTemp, pData, nDatalen);
 
-		char* pszData = NULL;
-		pszData = (char* )pData;
-		/// pszData[nDatalen] = '\0';
-		pszData += 5;
-		CMarkup XmlTemp;
-		if(false == XmlTemp.SetDoc(pszData))
-		{
-			e_PrintLog("XML 包不完整【收到TCP数据错误】，ClientIP = %s, ClientPort = %d nDatalen = %d, 异常数据:\r\n\r\n %s",
-				pszClientIP, usClientPort, nDatalen, pszData);
-		}
-		//else
-		//{
-		//	//e_PrintLog("收到TCP数据，ClientIP = %s, ClientPort = %d\r\n",
-		//	//	pszClientIP, usClientPort);
-
-		//	/// e_PrintLog("%s", pszData + 3);
-		//}
-		/// m_CNetCore.e_ITCPSendData(ulContextID, (PBYTE)pData, nDatalen);
 	}
 	/// 收到UDP数据
-	else if(NDT_UDPData == usNetDataType)
+	else if(NTT_UDPData == usNetType)
 	{
 		e_PrintLog("收到UDP数据，ClientIP = %s, ClientPort = %d\r\n",
 			pszClientIP, usClientPort);
@@ -83,8 +48,9 @@ static void e_OnRecvDataCallBack(USHORT usNetDataType, ULONG ulContextID,
 }
 
 /// 处理发送完成数据
-static void e_OnSendDataCallBack(USHORT usNetDataType, ULONG ulContextID,
-	const char* pszClientIP, USHORT usClientPort, void* pData, int nDatalen)
+static void e_OnSendDataCallBack(USHORT usNetType, ULONG ulContextID, const char* pszClientIP,
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount,
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
 {
 	START_DEBUG_INFO
 	/// 发送TCP数据
@@ -109,29 +75,12 @@ static void e_OnConectionCallBack(ULONG ulContextID, const char* pszClientIP, US
 	/// 客户端连接成功
 	e_PrintLog("客户端连接成功：ClientIP = %s, ClientPort = %d\r\n", pszClientIP, usClientPort);
 
-	/// 测试发送数据
-	T_TestStruct sttTest;
-	
-	strcpy_s(sttTest.szText, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"\
-		"<MANZAIVideo>\r\n"\
-		"<Version>1.0</Version>\r\n"\
-		"<Sequence>64</Sequence>\r\n"\
-		"<CommandType>ASK</CommandType>\r\n"\
-		"<Command>LOGIN</Command>\r\n"\
-		"<ClientID>ec9e8bf5-b462-4af3-be51-88bbbccd5527</ClientID>\r\n"\
-		"</MANZAIVideo>\r\n");
-	sttTest.usSize = strlen(sttTest.szText) + 3;
-
-	BYTE BtTemp = 1;
-
-	char szTemp[1024];
+	char szTemp[512];
 	memset(szTemp, 0x00, sizeof(szTemp));
-	memcpy(szTemp, &sttTest.usSize, sizeof(USHORT));
-	memcpy(szTemp + sizeof(USHORT), &sttTest.usSize, sizeof(USHORT));
-	memcpy(szTemp + sizeof(USHORT) * 2, &BtTemp, sizeof(BYTE));
-	memcpy(szTemp + sizeof(USHORT) * 2 + 1, sttTest.szText, strlen(sttTest.szText));
-	int nSendlen = sttTest.usSize + 2;
-	m_CNetCore.e_ITCPSendData(ulContextID, (PBYTE)szTemp, nSendlen);
+
+	strncpy_s(szTemp, "Hello this is lily", sizeof(szTemp) - 1); 
+
+	m_NetServer.e_ITCPSendStringData(ulContextID, szTemp, strlen(szTemp));
 	/// 释放连接
 	/// m_CNetCore.e_ICloseTCPContext(ulContextID);
 	END_DEBUG_INFO
@@ -157,7 +106,7 @@ int main(int argc, char* argv[])
 
 	T_NetInitStruct sttNetInit;
 	sttNetInit.usServerPort = 6880;
-	sttNetInit.usServerNetType = NCNT_Both;
+	sttNetInit.usServerNetType = NSNT_Both;
 	sttNetInit.usMaxIOWorkers = 6;
 	sttNetInit.usPendReadsNum = 6;
 	sttNetInit.bOrderSend = true;
@@ -168,7 +117,7 @@ int main(int argc, char* argv[])
 	sttNetInit.bUDPJoinGroup = true;
 	strcpy(sttNetInit.szUDPGroupIP, "239.255.0.1");
 	/// 启动服务
-	m_CNetCore.e_IStartServer(&sttNetInit, e_OnRecvDataCallBack, e_OnSendDataCallBack,
+	m_NetServer.e_IStartServer(&sttNetInit, e_OnRecvDataCallBack, e_OnSendDataCallBack,
 		e_OnConectionCallBack, e_OnDisConectionCallBack, e_PrintLog);
 
 	char szChar;
@@ -176,7 +125,7 @@ int main(int argc, char* argv[])
 	{
 		if('0' == szChar)
 		{
-			m_CNetCore.e_IStopdServer();
+			m_NetServer.e_IStopdServer();
 			break;
 		}
 		else if('1' == szChar)
@@ -196,18 +145,13 @@ int main(int argc, char* argv[])
 					"<ClientID>ec9e8bf5-b462-4af3-be51-88bbbccd5527</ClientID>\r\n"\
 					"</MANZAIVideo>\r\n", ++ulNums);
 
-				m_CNetCore.e_IUDPSendData("239.255.0.1", 6880, (PBYTE)szData, 2048);
+				m_NetServer.e_IUDPSendStringData("239.255.0.1", 6880, szData, 2048);
 
 				/// Sleep(5);
 			}
 		}
 	}
 
-	if(NULL != m_pLogFile)
-	{
-		delete m_pLogFile;
-		m_pLogFile = NULL;
-	}
 	/// 终止Winsock 2 DLL (Ws2_32.dll) 的使用
 	WSACleanup();
 	return 0;

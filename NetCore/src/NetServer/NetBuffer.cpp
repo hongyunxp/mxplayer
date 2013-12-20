@@ -71,14 +71,17 @@ bool CNetBuffer::e_GetData(BYTE*& pBtData, UINT unSize)
 {
 	START_DEBUG_INFO
 	/// 验证数据合法性
-	if(NULL == pBtData || unSize > m_unUsed)
+	if(NULL == pBtData || m_unUsed < unSize)
 	{
 		END_DEBUG_INFO
 		return false;
 	}
 	/// 获取数据包类型
-	memmove(&pBtData, m_Buffer, unSize);
+	memmove(pBtData, m_Buffer, unSize);	
 	m_unUsed -= unSize;
+	memmove(m_Buffer, m_Buffer + unSize, m_unUsed);
+	/// 重置移除的部分数据
+	memset(m_Buffer + m_unUsed, 0x00, unSize);
 	END_DEBUG_INFO
 	return true;
 }

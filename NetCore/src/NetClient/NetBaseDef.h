@@ -33,4 +33,21 @@
 /// 连接服务器时扫描的IP结束地址
 #define NETSERVERSTOPIP		20
 
+/// SELET 模式 
+
+/// 读取套接字数据验证
+#define SELECT_MODE_READY			0x01
+/// 写入套接字数据验证
+#define SELECT_MODE_WRITE			0x02
+
+
+// SELECT 返回值 
+#define SELECT_STATE_ERROR         0
+#define SELECT_STATE_READY         1
+#define SELECT_STATE_ABORTED       2
+#define SELECT_STATE_TIMEOUT       3
+
+// 接收和发送超时时间
+#define  NET_REV_SEND_TIME_OUT		10
+
 #endif	/// __FWAYNET_NETCLIENTD_NETBASEDEF_H_H__
