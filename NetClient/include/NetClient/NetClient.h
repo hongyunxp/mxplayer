@@ -29,17 +29,34 @@
 #define NETCLIENT_API __declspec(dllexport)
 #else
 #define NETCLIENT_API __declspec(dllimport)
-#endif /// LOTTERYNETCLIENT_API_EXPORTS
-
+#endif /// NETCLIENT_EXPORTS
 
 class NETCLIENT_API CNetClient
 {
 public:
+	/// ==============================================
+	/// @par 功能 
+	/// 构造函数
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
 	CNetClient();
 
+	/// ==============================================
+	/// @par 功能 
+	/// 析构函数
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================]
 	~CNetClient();
-public:
 
+public:
 	/// ==============================================
 	/// @par 功能 
 	/// 连接服务器(支持自动重连)
@@ -64,21 +81,7 @@ public:
 	/// @return 	int				1= 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int  e_DisconnectServer();
-
-	/// ==============================================
-	/// @par 功能 
-	/// 发送二进制数据
-	/// @param 
-	/// [in,out]	<参数名>		<参数说明>
-	/// [in]		unSSDType		对象/结构的定义类型
-	/// [in]		usOBJSize		对象/结构的大小
-	/// [in]		usOBJCount		对象/结构的个数
-	/// [in]		pSendData		要发送的数据内容
-	/// @return 	int				1 = 成功，小于等于0表示失败
-	/// @note 		Creat By li.xl 2013/12/19 
-	/// ==============================================
-	int e_SendBinaryData(UINT unSSDType, USHORT usOBJSize, USHORT usOBJCount, BYTE* pSendData);
+	int e_DisconnectServer();
 
 	/// ==============================================
 	/// @par 功能 
@@ -93,6 +96,19 @@ public:
 	/// ==============================================
 	int e_SendStringData(UINT unSSDType, char* pszSendData, USHORT usDatalen);
 
+	/// ==============================================
+	/// @par 功能 
+	/// 发送二进制数据对象
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		unSSDType		对象/结构的定义类型
+	/// [in]		usOBJSize		对象/结构的大小
+	/// [in]		usOBJCount		对象/结构的个数
+	/// [in]		pSendData		要发送的数据内容
+	/// @return 	int				1 = 成功，小于等于0表示失败
+	/// @note 		Creat By li.xl 2013/12/19 
+	/// ==============================================
+	int e_SendBinaryData(UINT unSSDType, UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData);
 };
 
 #endif	/// __LEE_NETCLIENT_OUTINCLUDE_H__INCLUDE__

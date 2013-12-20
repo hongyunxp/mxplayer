@@ -1,41 +1,43 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// 
 /// @par 模块名
-/// <幸运农场客户端所需结构、和枚举定义>
+/// 客户端网络数据命令格式
 /// @par 相关文件
-/// CommTypes.h 
+/// 引用此文件的所有文件头
 /// @par 功能详细描述
-/// <所需结构，和枚举定义>
 /// @par 多线程安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @par 异常时安全性
-/// <是/否>[否，说明]
+/// [否，说明]
 /// @note         -
-/// 
 /// @file         NetClientDef.h
-/// @brief        <模块功能简述>
+/// @brief        -
 /// @author       Li.xl
 /// @version      1.0
-/// @date         2011/05/25
-/// @todo         <将来要作的事情>
+/// @date         2013/12/20
+/// @todo         -
 /// 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __FWAYNET_LOTTERY_NETCLIENTDEF_H__
 #define __FWAYNET_LOTTERY_NETCLIENTDEF_H__
 
-namespace FWAYNET
+/// 命令对象类型
+enum _eCmdOBJType
 {
-	/// 接收结构数据回调函数
-	typedef void (*OnRecvDataCallBack)(UINT nSttType, int nCount, void* pData);
+	COBJT_None = 0,
+	COBJT_Test = 1,
+};
 
-	/// 测试结构体
-	typedef struct _tTestStruct
-	{
-		char	szTime[32];
-		char	szAddr[64];
-		char	szName[32];
-	}T_TestStruct, *LP_TestStruct;
-}
+/// 接收结构数据回调函数
+typedef void (*OnRecvDataCallBack)(UINT nSttType, int nCount, void* pData);
+
+/// 测试结构体
+typedef struct _tTestStruct
+{
+	char	szTime[32];
+	char	szAddr[64];
+	char	szName[32];
+}T_TestStruct, *LP_TestStruct;
 
 #endif /// __FWAYNET_LOTTERY_NETCLIENTDEF_H__
