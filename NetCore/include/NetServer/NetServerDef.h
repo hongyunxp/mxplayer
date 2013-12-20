@@ -26,34 +26,46 @@
 /// 接收数据完成回调函数
 /// @param 
 /// [in,out]	<参数名>		<参数说明>
-///	[in]		usNetDataType	发送和接收数据的网络类型 参见_eNetDataType
+///	[in]		usNetType		发送和接收数据的网络类型 参见_eNetTransfType
 /// [in]		ulContextID		若是TCP连接此参数大于0，UDP连接此参数为0
 /// [in]		pszClientIP		客户端IP
 /// [in]		usClientPort	客户端端口号
-/// [in]		pData			数据字段
+/// [in]		sDataType		数据类型
+/// [in]		nOBJType		对象/结构类型
+/// [in]		sOBJCount		对象/结构总数
+/// [in]		sSNum			对象/结构数组开始数量(数据列表拆包时与sOBJCount配合使用)
+/// [in]		sENum			对象/结构数组结束数量(数据列表拆包是与sOBJCount配合使用)
 /// [in]		nDatalen		数据长度
+/// [in]		pData			数据内容
 /// @return 	-
 /// @note 		by li.xl 2013/06/14 
 /// ==============================================
-typedef void (*OnRecvDataCallBack)(USHORT usNetDataType, ULONG ulContextID,
-	const char* pszClientIP, USHORT usClientPort, void* pData, int nDatalen);
+typedef void (*OnRecvDataCallBack)(USHORT usNetType, ULONG ulContextID, const char* pszClientIP, 
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount, 
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData);
 
 /// ==============================================
 /// @par 功能 
 /// 发送数据完成回调函数
 /// @param 
 /// [in,out]	<参数名>		<参数说明>
-///	[in]		usNetDataType	发送和接收数据的网络类型 参见_eNetDataType
+///	[in]		usNetType		发送和接收数据的网络类型 参见_eNetTransfType
 /// [in]		ulContextID		若是TCP连接此参数大于0，UDP连接此参数为0
 /// [in]		pszClientIP		客户端IP
 /// [in]		usClientPort	客户端端口号
-/// [in]		pData			数据字段
+/// [in]		sDataType		数据类型
+/// [in]		nOBJType		对象/结构类型
+/// [in]		sOBJCount		对象/结构总数
+/// [in]		sSNum			对象/结构数组开始数量(数据列表拆包时与sOBJCount配合使用)
+/// [in]		sENum			对象/结构数组结束数量(数据列表拆包是与sOBJCount配合使用)
 /// [in]		nDatalen		数据长度
+/// [in]		pData			数据内容
 /// @return 	-
 /// @note 		by li.xl 2013/06/14 
 /// ==============================================
-typedef void (*OnSendDataCallBack)(USHORT usNetDataType, ULONG ulContextID,
-	const char* pszClientIP, USHORT usClientPort, void* pData, int nDatalen);
+typedef void (*OnSendDataCallBack)(USHORT usNetType, ULONG ulContextID, const char* pszClientIP,
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount,
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData);
 
 /// ==============================================
 /// @par 功能 
@@ -92,21 +104,21 @@ typedef void (*OnDisConectionCallBack)(ULONG ulContextID, const char* pszClientI
 /// ==============================================
 typedef void (*OnPrintLog)(const char* pszfmt, ...);
 
-/// 发送和接收数据的网络类型
-enum _eNetDataType
+/// 网络传输类型
+enum _eNetTransfType
 {
-	NDT_None		= 0,	///< 未知
-	NDT_TCPData		= 1,	///< TCP数据
-	NDT_UDPData		= 2,	///< UDP数据
+	NTT_None		= 0,	///< 未知
+	NTT_TCPData		= 1,	///< TCP数据
+	NTT_UDPData		= 2,	///< UDP数据
 };
 
 /// 网络服务类型
-enum _eNetCoreNetType
+enum _eNetServerNetType
 {
-	NCNT_None	= 0,		///< 无，未知
-	NCNT_TCP	= 1,		///< TCP 网络服务
-	NCNT_UDP	= 2,		///< UDP 网络服务
-	NCNT_Both	= 3,		///< 兼容 UDP 和 TCP
+	NSNT_None	= 0,		///< 无，未知
+	NSNT_TCP	= 1,		///< TCP 网络服务
+	NSNT_UDP	= 2,		///< UDP 网络服务
+	NSNT_Both	= 3,		///< 兼容 UDP 和 TCP
 };
 
 /// 网络服务初始化结构体信息
@@ -134,7 +146,7 @@ typedef struct _tNetInitStruct
 	void e_InitStruct()
 	{
 		usServerPort = 0;
-		usServerNetType = NCNT_None;
+		usServerNetType = NSNT_None;
 		usMaxIOWorkers = 0;
 		usPendReadsNum = 4;
 		usFreeBufMaxNum = 0;

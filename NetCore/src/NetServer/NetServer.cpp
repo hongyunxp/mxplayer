@@ -64,61 +64,111 @@ bool CNetServer::e_IStopdServer()
 	return e_GetNetServer->e_StopdNetService();
 }
 
-bool CNetServer::e_ITCPSendData(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+bool CNetServer::e_ITCPSendStringData(ULONG ulContextID, char* pszSendData, int nDataLen)
 {
 	START_DEBUG_INFO
+	/// 验证数据合法性
+	if(NULL == pszSendData || 0 >= nDataLen)
+	{
+		END_DEBUG_INFO
+		return false;
+	}
+
+	T_TCPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
+	/// 赋值数据
+	sttBufferHead.nTotalLen = sizeof(T_TCPBufferHead) + nDataLen\
+		- sizeof(sttBufferHead.nTotalLen);
+	sttBufferHead.sDataType = JDT_StringData;
+	sttBufferHead.nOBJSize = nDataLen;
+	sttBufferHead.sOBJCount = 1;
+	/// 发送数据
+	END_DEBUG_INFO
+	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, 
+	sttBufferHead, (BYTE* )pszSendData, nDataLen);
+}
+
+bool CNetServer::e_ITCPSendBinaryData(ULONG ulContextID, UINT unSSDType, 
+	UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData)
+{
+	START_DEBUG_INFO
+	/// 获取数据长度
+	int nDataLen = unOBJSize * usOBJCount;
 	/// 验证数据合法性
 	if(NULL == pSendData || 0 >= nDataLen)
 	{
 		END_DEBUG_INFO
 		return false;
 	}
+
+	T_TCPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
+	/// 赋值数据
+	sttBufferHead.nTotalLen = sizeof(T_TCPBufferHead) + nDataLen\
+		- sizeof(sttBufferHead.nTotalLen);
+	sttBufferHead.sDataType = JDT_StructData;
+	sttBufferHead.nOBJType = unSSDType;
+	sttBufferHead.nOBJSize = unOBJSize;
+	sttBufferHead.sOBJCount = usOBJCount;
+	sttBufferHead.sSNum = 1;
+	sttBufferHead.sENum = usOBJCount;
 	/// 发送数据
 	END_DEBUG_INFO
-	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
+	return e_GetNetServer->e_SendDataToTCPClient(ulContextID,
+	sttBufferHead, pSendData, nDataLen);
 }
 
-/*bool CNetServer::e_ITCPSendStringData(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+bool CNetServer::e_IUDPSendStringData(const char* pszClientIP, 
+	USHORT usClientPort, char* pszSendData, int nDataLen)
 {
 	START_DEBUG_INFO
 	/// 验证数据合法性
-	if(NULL == pSendData || 0 >= nDataLen)
+	if(NULL == pszClientIP || 0 >= usClientPort ||
+		NULL == pszSendData || 0 >= nDataLen)
 	{
 		END_DEBUG_INFO
 		return false;
 	}
+
+	T_UDPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+	/// 赋值数据
+	sttBufferHead.sDataType = JDT_StringData;
+	sttBufferHead.nOBJSize = nDataLen;
+	sttBufferHead.sOBJCount = 1;
 	/// 发送数据
 	END_DEBUG_INFO
-	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
+	return e_GetNetServer->e_SendDataToUDPClient(pszClientIP,
+	usClientPort, sttBufferHead, (BYTE* )pszSendData, nDataLen);
 }
 
-bool CNetServer::e_ITCPSendBData(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+bool CNetServer::e_IUDPSendBinaryData(const char* pszClientIP, USHORT usClientPort, 
+	UINT unSSDType, UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData)
 {
 	START_DEBUG_INFO
+	/// 获取数据长度
+	int nDataLen = unOBJSize * usOBJCount;
 	/// 验证数据合法性
-	if(NULL == pSendData || 0 >= nDataLen)
+	if(NULL == pszClientIP || 0 >= usClientPort ||
+		NULL == pSendData || 0 >= nDataLen)
 	{
 		END_DEBUG_INFO
 		return false;
 	}
-	/// 发送数据
-	END_DEBUG_INFO
-	return e_GetNetServer->e_SendDataToTCPClient(ulContextID, pSendData, nDataLen);
-}
-*/
 
-bool CNetServer::e_IUDPSendData(const char* pszClientIP, USHORT usClientPort, BYTE* pSendData, int nDataLen)
-{
-	START_DEBUG_INFO
-	/// 验证数据合法性
-	if(NULL == pszClientIP || 0 >= usClientPort || NULL == pSendData || 0 >= nDataLen)
-	{
-		END_DEBUG_INFO
-		return false;
-	}
+	T_UDPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+	/// 赋值数据
+	sttBufferHead.sDataType = JDT_StructData;
+	sttBufferHead.nOBJType = unSSDType;
+	sttBufferHead.nOBJSize = unOBJSize;
+	sttBufferHead.sOBJCount = usOBJCount;
+	sttBufferHead.sSNum = 1;
+	sttBufferHead.sENum = usOBJCount;
 	/// 发送数据
 	END_DEBUG_INFO
-	return e_GetNetServer->e_SendDataToUDPClient(pszClientIP, usClientPort, pSendData, nDataLen);
+	return e_GetNetServer->e_SendDataToUDPClient(pszClientIP,
+		usClientPort, sttBufferHead, pSendData, nDataLen);
 }
 
 bool CNetServer::e_ICloseTCPContext(ULONG ulContextID)

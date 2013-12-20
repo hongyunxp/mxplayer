@@ -37,19 +37,30 @@ enum _eJobDataType
 	JDT_StructData,					///< 对象/结构体数据
 };
 
-/// 网络数据头结构体
-typedef struct _tBufferHead
+/// TCP网络数据头结构体
+typedef struct _tTCPBufferHead
 {
-	int				nTotalLen;		///< 数据总长度(包含数据头和数据内容长度)
+	int				nTotalLen;		///< 数据总长度(包含数据头和数据内容长度，不包含描述字段本身)
 	short			sDataType;		///< 数据类型			参见：_eJobDataType
 	int				nOBJType;		///< 对象数据类型		参见：_eCmdOBJType
-	int				nOBJSize;		///< 对象数据大小		
+	int				nOBJSize;		///< 对象数据大小
+	short			sOBJCount;		///< 对象数据个数
+	short			sSNum;			///< 开始数量
+	short			sENum;			///< 结束数量
+	int				nReserved;		///< 预留扩展字段
+}T_TCPBufferHead, *LP_TCPBufferHead;
+
+/// UDP网络数据头结构体
+typedef struct _tUDPBufferHead
+{
+	short			sDataType;		///< 数据类型			参见：_eJobDataType
+	int				nOBJType;		///< 对象数据类型		参见：_eCmdOBJType
+	int				nOBJSize;		///< 对象数据大小
 	short			sOBJCount;		///< 对象数据个数
 	short			sSNum;			///< 开始数量
 	short			sENum;			///< 结束数量
 	int				nFlag;			///< 标识符(请求/回复)
 	int				nReserved;		///< 预留扩展字段
-	char			cBuf;			///< 缓冲区数据(存放数据得一个字节)
-}T_BufferHead, *LP_BufferHead;
+}T_UDPBufferHead, *LP_UDPBufferHead;
 
 #endif	/// __FWAYNET_NETCORE_NETCORE_DEF_H_H__

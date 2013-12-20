@@ -120,14 +120,14 @@ bool CNetIOCP::e_StartNetService()
 	}
 	bool bRet = true;
 	/// 如果网络服务为TCP服务
-	if(NCNT_TCP == m_sttNetInitStruct.usServerNetType ||
-		NCNT_Both == m_sttNetInitStruct.usServerNetType)
+	if(NSNT_TCP == m_sttNetInitStruct.usServerNetType ||
+		NSNT_Both == m_sttNetInitStruct.usServerNetType)
 	{
 		bRet &= i_RunTCPService();
 	}
 	/// 如果网络服务为UDP服务
-	if(NCNT_UDP == m_sttNetInitStruct.usServerNetType ||
-		NCNT_Both == m_sttNetInitStruct.usServerNetType)
+	if(NSNT_UDP == m_sttNetInitStruct.usServerNetType ||
+		NSNT_Both == m_sttNetInitStruct.usServerNetType)
 	{
 		bRet &= i_RunUDPService();
 	}
@@ -1164,7 +1164,7 @@ bool CNetIOCP::i_ProcessPreviouRecv(T_ClientContext*& pContextStruct, CNetBuffer
 				/// 增加一定大小的数据到连接缓冲
 				pTempBuffer->e_AddMoveOtherBuffer(pNetBuffer, unHowMuchIsNeeded);
 				/// 处理接收包数据
-				e_NotifyReceivedPackage(NDT_TCPData, pContextStruct, pTempBuffer);
+				e_NotifyReceivedPackage(NTT_TCPData, pContextStruct, pTempBuffer);
 				/// 释放数据缓冲
 				m_CBufferManager.e_ReleaseBuffer(pContextStruct->pCurrentBuffer);
 				/// 重置当前处理的缓冲
@@ -1236,7 +1236,7 @@ void CNetIOCP::i_ProcessCurrentRecv(T_ClientContext*& pContextStruct, CNetBuffer
 			if(unDataSize == unUsedBuffer - MIN_NET_BUFFER_SIZE)
 			{
 				/// 处理接收数据包
-				e_NotifyReceivedPackage(NDT_TCPData, pContextStruct, pNetBuffer);
+				e_NotifyReceivedPackage(NTT_TCPData, pContextStruct, pNetBuffer);
 				/// 释放数据对象
 				m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
 				/// 赋值循环变量, 退出循环
@@ -1248,7 +1248,7 @@ void CNetIOCP::i_ProcessCurrentRecv(T_ClientContext*& pContextStruct, CNetBuffer
 				if(true == m_CBufferManager.e_SplitNetBuffer(pNetBuffer, pTempBuffer, unDataSize + MIN_NET_BUFFER_SIZE))
 				{
 					/// 处理数据包
-					e_NotifyReceivedPackage(NDT_TCPData, pContextStruct, pTempBuffer);
+					e_NotifyReceivedPackage(NTT_TCPData, pContextStruct, pTempBuffer);
 					/// 释放数据
 					m_CBufferManager.e_ReleaseBuffer(pTempBuffer);
 					/// 继续循环获取数据，因为还有未被拆分出来的数据没有接收
@@ -1374,10 +1374,18 @@ void CNetIOCP::i_OnTCPSended(T_ClientContext* pClientContext, CNetBuffer* pNetBu
 			/// 缓冲对象的使用大小等于端口获取的大小
 			if(nDataLen == pNetBuffer->e_GetUsed())
 			{
+				/// 获取数据头
+				T_TCPBufferHead sttBufferHead;
+				memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
+				BYTE* pBtData = (BYTE* )&sttBufferHead;
+				pNetBuffer->e_GetData(pBtData, sizeof(T_TCPBufferHead));
 				/// 处理发送完成
-				e_NotifyWriteCompleted(NDT_TCPData, pClientContext->ulContextID,
+				e_NotifyWriteCompleted(NTT_TCPData, pClientContext->ulContextID,
 					pClientContext->szClientIP, pClientContext->usClientPort, 
-					pNetBuffer->e_GetBuffer(), nDataLen);
+					sttBufferHead.sDataType, sttBufferHead.nOBJType, 
+					sttBufferHead.sOBJCount, sttBufferHead.sSNum,
+					sttBufferHead.sENum, pNetBuffer->e_GetUsed(),
+					pNetBuffer->e_GetBuffer());
 			}
 			/// 释放缓冲数据
 			m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
@@ -1405,10 +1413,19 @@ void CNetIOCP::i_OnUDPRecv(T_ClientContext* pClientContext, CNetBuffer* pNetBuff
 		/// 执行回调函数
 		if(NULL != m_pFunRecvData)
 		{
-			m_pFunRecvData(NDT_UDPData, 0/*pClientContext->ulContextID*/,
+			/// NETCORE数据头
+			T_UDPBufferHead sttBufferHead;
+			memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+			BYTE* pBtData = (BYTE* )&sttBufferHead;
+			pNetBuffer->e_GetData(pBtData, sizeof(T_UDPBufferHead));
+			/// 通知调用者数据信息
+			m_pFunRecvData(NTT_UDPData, 0 /*UDP不返回连接ID*/,
 				inet_ntoa(pNetBuffer->m_sttUDPAddrInfo.sin_addr),
 				ntohs(pNetBuffer->m_sttUDPAddrInfo.sin_port),
-				pNetBuffer->e_GetBuffer(), nDataLen);
+				sttBufferHead.sDataType, sttBufferHead.nOBJType,
+				sttBufferHead.sOBJCount, sttBufferHead.sSNum,
+				sttBufferHead.sENum, pNetBuffer->e_GetUsed(),
+				pNetBuffer->e_GetBuffer());
 		}
 		/// 释放数据缓冲
 		pNetBuffer->e_ReBuffValue();
@@ -1428,12 +1445,19 @@ void CNetIOCP::i_OnUDPSend(T_ClientContext* pClientContext, CNetBuffer* pNetBuff
 	/// 如果缓冲数据存在
 	if(NULL != pNetBuffer)
 	{
+		/// 获取数据头
+		T_UDPBufferHead sttBufferHead;
+		memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+		BYTE* pBtData = (BYTE* )&sttBufferHead;
+		pNetBuffer->e_GetData(pBtData, sizeof(T_UDPBufferHead));
 		/// 发送数据完成通知
-		e_NotifyWriteCompleted(NDT_UDPData, pClientContext->ulContextID,
+		e_NotifyWriteCompleted(NTT_UDPData, 0,
 			inet_ntoa(pNetBuffer->m_sttUDPAddrInfo.sin_addr),
 			ntohs(pNetBuffer->m_sttUDPAddrInfo.sin_port),
-			pNetBuffer->e_GetBuffer(), nDataLen);
-		
+			sttBufferHead.sDataType, sttBufferHead.nOBJType,
+			sttBufferHead.sOBJCount, sttBufferHead.sSNum,
+			sttBufferHead.sENum, pNetBuffer->e_GetUsed(),
+			pNetBuffer->e_GetBuffer());		
 		/// 释放接收数据
 		m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
 	}
@@ -1583,21 +1607,30 @@ void CNetIOCP::e_NotifyReceivedPackage(USHORT usNetType, T_ClientContext* pConte
 
 	if(NULL != m_pFunRecvData)
 	{
+		/// NETCORE数据头
+		T_TCPBufferHead sttBufferHead;
+		memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
+		BYTE* pBtData = (BYTE* )&sttBufferHead;
+		pNetBuffer->e_GetData(pBtData, sizeof(T_TCPBufferHead));
 		/// 接收数据到客户端
 		m_pFunRecvData(usNetType, pContextStruct->ulContextID,
 			pContextStruct->szClientIP, pContextStruct->usClientPort,
-			pNetBuffer->e_GetBuffer(), pNetBuffer->e_GetUsed());
+			sttBufferHead.sDataType, sttBufferHead.nOBJType,
+			sttBufferHead.sOBJCount, sttBufferHead.sSNum,
+			sttBufferHead.sENum, pNetBuffer->e_GetUsed(),
+			pNetBuffer->e_GetBuffer());
 	}
 	END_DEBUG_INFO
 }
 
 void CNetIOCP::e_NotifyWriteCompleted(USHORT usNetType, ULONG ulContextID, const char* pszClientIP,
-	USHORT usClientPort, PBYTE pSendBuffer, UINT ulDataLen)
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount,
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
 {
 	START_DEBUG_INFO
 	/// 验证数据合法性
 	if(0 >= usNetType || 0 >= ulContextID || NULL == pszClientIP || 
-		0 >= usClientPort || NULL == pSendBuffer || 0 >= ulDataLen)
+		0 >= usClientPort || NULL == pData || 0 >= nDatalen)
 	{
 		END_DEBUG_INFO;
 		return;
@@ -1607,7 +1640,8 @@ void CNetIOCP::e_NotifyWriteCompleted(USHORT usNetType, ULONG ulContextID, const
 	{
 		/// 发送完成通知客户端
 		m_pFunSendData(usNetType, ulContextID, pszClientIP,
-			usClientPort, pSendBuffer, ulDataLen);
+			usClientPort, sDataType, nOBJType, sOBJCount,
+			sSNum, sENum, nDatalen, pData);
 	}
 	END_DEBUG_INFO
 }
@@ -1642,12 +1676,14 @@ bool CNetIOCP::e_GetIPAddrBySocket(SOCKET sClientSocket, char* pszClientIP, USHO
 	return bRet;
 }
 
-bool CNetIOCP::e_SendDataToTCPClient(ULONG ulContextID, BYTE* pSendData, int nDataLen)
+bool CNetIOCP::e_SendDataToTCPClient(ULONG ulContextID, T_TCPBufferHead& sttBufferHead, 
+	BYTE* pSendData, int nDataLen)
 {
 	START_DEBUG_INFO
 	bool bRet = false;
 	/// 验证发送数据合法性
-	if(NULL == pSendData || 0 >= nDataLen || MAX_NET_BUFFER_SIZE < nDataLen)
+	if(NULL == pSendData || 0 >= nDataLen || 
+		MAX_NET_BUFFER_SIZE < nDataLen + sizeof(T_TCPBufferHead))
 	{
 		END_DEBUG_INFO
 		return bRet;
@@ -1662,6 +1698,8 @@ bool CNetIOCP::e_SendDataToTCPClient(ULONG ulContextID, BYTE* pSendData, int nDa
 			/// 获取
 			if(true == m_CBufferManager.e_AllocateBuffer(pNetBuffer, IOPT_TCPSEND))
 			{
+				/// 增加数据头到缓冲
+				pNetBuffer->e_AddData((BYTE* )&sttBufferHead, sizeof(T_TCPBufferHead));
 				/// 增加数据到缓冲
 				pNetBuffer->e_AddData(pSendData, nDataLen);
 				/// 加锁数据对象
@@ -1690,13 +1728,14 @@ bool CNetIOCP::e_SendDataToTCPClient(ULONG ulContextID, BYTE* pSendData, int nDa
 	return bRet;
 }
 
-bool CNetIOCP::e_SendDataToUDPClient(const char* pszClientIP, USHORT usClientPort, BYTE* pSendData, int nDataLen)
+bool CNetIOCP::e_SendDataToUDPClient(const char* pszClientIP, USHORT usClientPort,
+	T_UDPBufferHead& sttBufferHead, BYTE* pSendData, int nDataLen)
 {
 	START_DEBUG_INFO
 	bool bRet = false;
 	/// 验证数据合法性
-	if(NULL == pszClientIP || 0 >= usClientPort || NULL == pSendData 
-		|| 0 >= nDataLen || MAX_NET_BUFFER_SIZE < nDataLen)
+	if(NULL == pszClientIP || 0 >= usClientPort || NULL == pSendData || 0 >= nDataLen
+		|| MAX_NET_BUFFER_SIZE < nDataLen + sizeof(T_UDPBufferHead))
 	{
 		END_DEBUG_INFO
 		return bRet;
@@ -1705,6 +1744,8 @@ bool CNetIOCP::e_SendDataToUDPClient(const char* pszClientIP, USHORT usClientPor
 	CNetBuffer* pNetBuffer = NULL;
 	if(true == m_CBufferManager.e_AllocateBuffer(pNetBuffer, IOPT_UDPSEND))
 	{
+		/// 增加数据头数据缓冲
+		pNetBuffer->e_AddData((BYTE* )&sttBufferHead, sizeof(T_UDPBufferHead));
 		/// 增加数据到缓冲对象
 		pNetBuffer->e_AddData(pSendData, nDataLen);
 		/// 发送UDP信息到客户但

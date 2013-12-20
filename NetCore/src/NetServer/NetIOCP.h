@@ -412,17 +412,23 @@ protected:
 	/// 通知发送数据包完成
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	/// [in]		usNetType		网络类型
-	///	[in]		ulContextID		连接ID
+	///	[in]		usNetType		发送和接收数据的网络类型 参见_eNetTransfType
+	/// [in]		ulContextID		若是TCP连接此参数大于0，UDP连接此参数为0
 	/// [in]		pszClientIP		客户端IP
 	/// [in]		usClientPort	客户端端口号
-	/// [in]		pSendBuffer		发送的数据
-	/// [in]		ulDataLen		数据长度
+	/// [in]		sDataType		数据类型
+	/// [in]		nOBJType		对象/结构类型
+	/// [in]		sOBJCount		对象/结构总数
+	/// [in]		sSNum			对象/结构数组开始数量(数据列表拆包时与sOBJCount配合使用)
+	/// [in]		sENum			对象/结构数组结束数量(数据列表拆包是与sOBJCount配合使用)
+	/// [in]		nDatalen		数据长度
+	/// [in]		pData			数据内容
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/21 
 	/// ==============================================
 	void e_NotifyWriteCompleted(USHORT usNetType, ULONG ulContextID, const char* pszClientIP,
-		USHORT usClientPort, PBYTE pSendBuffer, UINT ulDataLen);
+		USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount,
+		SHORT sSNum, SHORT sENum, int nDatalen, void* pData);
 
 	/// ==============================================
 	/// @par 功能 
@@ -456,12 +462,14 @@ public:
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	///	[in]		ulContextID		连接信息ID
+	/// [in]		sttBufferHead	TCP数据头
 	/// [in]		pSendData		发送的数据
 	/// [in]		nDataLen		数据长度
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/21 
 	/// ==============================================
-	bool e_SendDataToTCPClient(ULONG ulContextID, BYTE* pSendData, int nDataLen);
+	bool e_SendDataToTCPClient(ULONG ulContextID, T_TCPBufferHead& sttBufferHead,
+		BYTE* pSendData, int nDataLen);
 
 	/// ==============================================
 	/// @par 功能 
@@ -470,12 +478,14 @@ public:
 	/// [in,out]	<参数名>		<参数说明>
 	/// [in]		pszClientIP		客户端IP
 	///	[in]		usClientPort	客户端端口号
+	/// [in]		sttBufferHead	UDP数据头
 	/// [in]		pSendData		发送的数据
 	/// [in]		nDataLen		数据长度
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/22 
 	/// ==============================================
-	bool e_SendDataToUDPClient(const char* pszClientIP, USHORT usClientPort, BYTE* pSendData, int nDataLen);
+	bool e_SendDataToUDPClient(const char* pszClientIP, USHORT usClientPort,
+		T_UDPBufferHead& sttBufferHead, BYTE* pSendData, int nDataLen);
 
 	/// ==============================================
 	/// @par 功能 

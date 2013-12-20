@@ -88,13 +88,12 @@ public:
 	/// 发送字符串数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	/// [in]		unSSDType		对象/结构的定义类型
 	/// [in]		pszSendData		字符串数据
 	/// [in]		usDatalen		字符串长度	
 	/// @return 	int				1 = 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_SendStringData(UINT unSSDType, char* pszSendData, USHORT usDatalen);
+	int e_SendStringData(char* pszSendData, USHORT usDatalen);
 
 	/// ==============================================
 	/// @par 功能 

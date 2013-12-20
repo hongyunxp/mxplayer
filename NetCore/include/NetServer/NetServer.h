@@ -67,30 +67,66 @@ public:
 
 	/// ==============================================
 	/// @par 功能 
-	/// TCP发送数据
+	/// TCP发送字符串数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	///	[in]		ulContextID		连接信息ID
+	///	[in]		ulContextID		连接信息ID，0表示发送信息到所有客户端
+	/// [in]		pszSendData		发送的数据
+	/// [in]		nDataLen		数据长度
+	/// @return 	-
+	/// @note 		by li.xl 2013/06/22 
+	/// ==============================================
+	bool e_ITCPSendStringData(ULONG ulContextID, char* pszSendData, int nDataLen);
+
+	/// ==============================================
+	/// @par 功能 
+	/// TCP发送二进制数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	[in]		ulContextID		连接信息ID，0表示发送信息到所有客户端
+	/// [in]		unSSDType		对象/结构类型
+	/// [in]		unOBJSize		对象数据大小
+	/// [in]		usOBJCount		对象数据个数
 	/// [in]		pSendData		发送的数据
 	/// [in]		nDataLen		数据长度
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/22 
 	/// ==============================================
-	bool e_ITCPSendData(ULONG ulContextID, BYTE* pSendData, int nDataLen);
+	bool e_ITCPSendBinaryData(ULONG ulContextID, UINT unSSDType, 
+		UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData);
 
 	/// ==============================================
 	/// @par 功能 
-	/// UDP发送数据
+	/// UDP发送字符串数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	/// [in]		pszClientIP		客户端IP
 	///	[in]		usClientPort	客户端端口号
+	/// [in]		pszSendData		发送的数据
+	/// [in]		nDataLen		数据长度
+	/// @return 	-
+	/// @note 		by li.xl 2013/06/22 
+	/// ==============================================
+	bool e_IUDPSendStringData(const char* pszClientIP, USHORT usClientPort,
+		char* pszSendData, int nDataLen);
+
+	/// ==============================================
+	/// @par 功能 
+	/// UDP发送二进制数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		pszClientIP		客户端IP
+	///	[in]		usClientPort	客户端端口号
+	/// [in]		unSSDType		对象/结构类型
+	/// [in]		unOBJSize		对象数据大小
+	/// [in]		usOBJCount		对象数据个数
 	/// [in]		pSendData		发送的数据
 	/// [in]		nDataLen		数据长度
 	/// @return 	-
 	/// @note 		by li.xl 2013/06/22 
 	/// ==============================================
-	bool e_IUDPSendData(const char* pszClientIP, USHORT usClientPort, BYTE* pSendData, int nDataLen);
+	bool e_IUDPSendBinaryData(const char* pszClientIP, USHORT usClientPort, 
+		UINT unSSDType, UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData);
 
 	/// ==============================================
 	/// @par 功能 
