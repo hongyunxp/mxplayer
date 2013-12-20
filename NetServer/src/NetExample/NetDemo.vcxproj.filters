@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="NetCore">
+      <UniqueIdentifier>{bd3ea628-45ff-4c68-9830-145f65215ba7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Comm">
+      <UniqueIdentifier>{b25a98cb-78cc-4acb-a034-0f468118f5f2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Include\NetCore\NetCore.h">
+      <Filter>NetCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\NetCore\NetCoreDef.h">
+      <Filter>NetCore</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\Common\_Debug.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\Common\AutoLock.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\Common\CommTypes.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\LogFile.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\common\XML\Markup.h">
+      <Filter>Comm</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NetDemo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\common\XML\Markup.cpp">
+      <Filter>Comm</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
