@@ -111,7 +111,6 @@
     <ClInclude Include="..\..\include\common\_Debug.h" />
     <ClInclude Include="..\..\include\common\CommTypes.h" />
     <ClInclude Include="..\..\include\NetClient\NetClientDef.h" />
-    <ClInclude Include="..\..\include\NetClient\NetLotteryDef.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="NetClient.def" />

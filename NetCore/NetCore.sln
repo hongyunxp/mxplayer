@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetClient", "src\NetClient\NetClient.vcxproj", "{64013A53-096A-49E2-9E1D-F67A0865A0A8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetServer", "src\NetServer\NetServer.vcxproj", "{35FAD10F-A268-4346-B48B-D5CD587306B2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{64013A53-096A-49E2-9E1D-F67A0865A0A8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{64013A53-096A-49E2-9E1D-F67A0865A0A8}.Debug|Win32.Build.0 = Debug|Win32
+		{64013A53-096A-49E2-9E1D-F67A0865A0A8}.Release|Win32.ActiveCfg = Release|Win32
+		{64013A53-096A-49E2-9E1D-F67A0865A0A8}.Release|Win32.Build.0 = Release|Win32
+		{35FAD10F-A268-4346-B48B-D5CD587306B2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{35FAD10F-A268-4346-B48B-D5CD587306B2}.Debug|Win32.Build.0 = Debug|Win32
+		{35FAD10F-A268-4346-B48B-D5CD587306B2}.Release|Win32.ActiveCfg = Release|Win32
+		{35FAD10F-A268-4346-B48B-D5CD587306B2}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
