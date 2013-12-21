@@ -5,11 +5,11 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="NetCore">
-      <UniqueIdentifier>{bd3ea628-45ff-4c68-9830-145f65215ba7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Comm">
       <UniqueIdentifier>{b25a98cb-78cc-4acb-a034-0f468118f5f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetServer">
+      <UniqueIdentifier>{bd3ea628-45ff-4c68-9830-145f65215ba7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -20,14 +20,14 @@
       <Filter>Comm</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\NetServer\NetServer.h">
-      <Filter>NetCore</Filter>
+      <Filter>NetServer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\NetServer\NetServerDef.h">
-      <Filter>NetCore</Filter>
+      <Filter>NetServer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetDemo.cpp">
+    <ClCompile Include="NetServerDemo.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,4 +1,4 @@
-// NetDemo.cpp : 定义控制台应用程序的入口点。
+// NetServerDemo.cpp : 定义控制台应用程序的入口点。
 //
 
 #include "Common/CommTypes.h"
@@ -42,8 +42,6 @@ static void e_OnRecvDataCallBack(USHORT usNetType, ULONG ulContextID, const char
 	{
 		e_PrintLog("收到UDP数据，ClientIP = %s, ClientPort = %d\r\n",
 			pszClientIP, usClientPort);
-
-		/// m_CNetCore.e_IUDPSendData(pszClientIP, usClientPort, (PBYTE)pData, nDatalen);
 	}
 	END_DEBUG_INFO;
 }
@@ -54,18 +52,6 @@ static void e_OnSendDataCallBack(USHORT usNetType, ULONG ulContextID, const char
 	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
 {
 	START_DEBUG_INFO
-	/// 发送TCP数据
-	/*if(NDT_TCPData == usNetDataType)
-	{
-		e_PrintLog("发送TCP数据，ClientIP = %s, ClientPort = %d, nDatalen = %d\r\n. \r\n\r\n",
-			pszClientIP, usClientPort, nDatalen);
-	}
-	/// 发送UDP数据
-	else if(NDT_UDPData == usNetDataType)
-	{
-		e_PrintLog("发送UDP数据，ClientIP = %s, ClientPort = %d, nDatalen = %d\r\n. \r\n\r\n",
-			pszClientIP, usClientPort, nDatalen);
-	}*/
 	END_DEBUG_INFO
 }
 
@@ -76,14 +62,11 @@ static void e_OnConectionCallBack(ULONG ulContextID, const char* pszClientIP, US
 	/// 客户端连接成功
 	e_PrintLog("客户端连接成功：ClientIP = %s, ClientPort = %d\r\n", pszClientIP, usClientPort);
 
+	/// 测试发送数据
 	char szTemp[512];
 	memset(szTemp, 0x00, sizeof(szTemp));
-
 	strncpy_s(szTemp, "Hello this is lily", sizeof(szTemp) - 1); 
-
 	m_NetServer.e_ITCPSendStringData(ulContextID, szTemp, strlen(szTemp));
-	/// 释放连接
-	/// m_CNetCore.e_ICloseTCPContext(ulContextID);
 	END_DEBUG_INFO
 }
 
