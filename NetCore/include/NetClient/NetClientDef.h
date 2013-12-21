@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// 
 /// @par 模块名
-/// 客户端网络数据命令格式
+/// 客户端网络调用预定
 /// @par 相关文件
 /// 引用此文件的所有文件头
 /// @par 功能详细描述
@@ -19,8 +19,8 @@
 /// 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __FWAYNET__NETCLIENTDEF_H__
-#define __FWAYNET__NETCLIENTDEF_H__
+#ifndef __FWAYNET__NETCLIENTDEF_H_H__
+#define __FWAYNET__NETCLIENTDEF_H_H__
 
 /// ==============================================
 /// @par 功能 
@@ -39,23 +39,32 @@
 /// @return 	-
 /// @note 		Creat By li.xl 2013/12/21 
 /// ==============================================
-typedef void (*OnRecvDataCallBack)(USHORT usNetType, ULONG ulContextID, const char* pszClientIP, 
+typedef void (*OnRecvDataCallBack)(USHORT usNetType, const char* pszClientIP, 
 	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount, 
 	SHORT sSNum, SHORT sENum, int nDatalen, void* pData);
 
-/// 命令对象类型
-enum _eCmdOBJType
+/// 客户端初始化信息结构
+typedef struct _tInitNetClient
 {
-	COBJT_None = 0,
-	COBJT_Test = 1,
-};
+	char	szTCPServerIP[16];		///< TCP服务器IP
+	USHORT	usTCPServerPort;		///< TCP服务器端口
+	USHORT	usLocalUDPPort;			///< 本地UDP端口号
+	USHORT	usUDPJoinGroup;			///< 是否加入UDP组播
+	char	szUDPGroupIP[16];		///< 组播绑定IP
 
-/// 测试结构体
-typedef struct _tTestStruct
-{
-	char	szTime[32];
-	char	szAddr[64];
-	char	szName[32];
-}T_TestStruct, *LP_TestStruct;
+	_tInitNetClient()
+	{
+		e_InitStruct();
+	}
 
-#endif /// __FWAYNET__NETCLIENTDEF_H__
+	void e_InitStruct()
+	{
+		memset(szTCPServerIP, 0x00, sizeof(szTCPServerIP));
+		memset(szUDPGroupIP, 0x00, sizeof(szUDPGroupIP));
+		usTCPServerPort = 0;
+		usLocalUDPPort = 0;
+		usUDPJoinGroup = 0;
+	}
+}T_InitNetClient, *LP_InitNetClient;
+
+#endif /// __FWAYNET__NETCLIENTDEF_H_H__

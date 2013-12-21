@@ -23,104 +23,215 @@
 #include "NetClient/NetClient.h"
 #include "NetTreatMent.h"
 
-/// 定义通讯连接对象
-CNetTreatment m_CNetTreatment;
+#define e_GetNetClient	((CNetTreatment* )(m_pProNetClient))
 
 CNetClient::CNetClient()
 {
+	m_pProNetClient = new CNetTreatment();
 }
 
 CNetClient::~CNetClient()
 {
+	// 释放数据对象
+	if(NULL != e_GetNetClient)
+	{
+		delete e_GetNetClient;
+		m_pProNetClient = NULL;
+	}
 }
 
-int CNetClient::e_ConnectionServer(UINT nServerPort, int nClientType, 
-	OnRecvDataCallBack pReceiveDataCallBack, UINT nConnectType, char* pszServerIp)
+int CNetClient::e_IInitNetClient(T_InitNetClient* psttInitNetClient, 
+	OnRecvDataCallBack pfnRecvDataCallBack)
 {
 	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 初始化数据
+	e_GetNetClient->e_InitNetClient(psttInitNetClient);
+	e_GetNetClient->e_SetReceiveDataCallBack(pfnRecvDataCallBack);
+	END_DEBUG_INFO
+	return nRet;
+}
 
-	/// 如果回调函数不存在，则返回
-	if(NULL == pReceiveDataCallBack)
+int CNetClient::e_IConnectionServer()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 连接服务器
+	if(true == e_GetNetClient->e_ConnectServer())
+	{
+		nRet = 1;
+	}
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_IDisconnectServer()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	e_GetNetClient->e_StopTCPProcess();
+	nRet = 1;
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_ICreatUDPClient()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 创建UDP客户端
+	if(true == e_GetNetClient->e_CreatUDPClient())
+	{
+		nRet = 1;
+	}
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_IDestroyUDPClient()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	e_GetNetClient->e_StopUDPProcess();
+	nRet = 1;
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_ISendTCPStringData(char* pszSendData, UINT unDatalen)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 验证数据合法性
+	if(NULL == pszSendData || 0 >= unDatalen)
 	{
 		END_DEBUG_INFO
-		return 0;
+		return nRet;
 	}
 
-	/// 如果配置文件中配置了IP连接指定配置的IP
-	m_CNetTreatment.e_ConnectServer(szServiceIp, nServerPort, nClientType, 2);		
-	/// 设置回调函数
-	m_CNetTreatment.e_SetReceiveDataCallBack(pReceiveDataCallBack);
-	/// 启动发送线程
-	m_CNetTreatment.e_StartSend();
-	/// 启动接收线程
-	m_CNetTreatment.e_StartReceive();
-
-	END_DEBUG_INFO
-	return 1;
-}
-
-int CNetClient::e_DisconnectServer()
-{
-	START_DEBUG_INFO
-	/// 断开接收线程
-	m_CNetTreatment.e_StopReceive();
-	/// 断开发送线程
-	m_CNetTreatment.e_StopSend();
-	END_DEBUG_INFO
-	return 1;
-}
-
-int CNetClient::e_SendDataByStruct(UINT nSSDType, UINT nStructSize, int nCount, void* pData)
-{
-	START_DEBUG_INFO
-	/// 声明发送接收临时变量
-	T_RSStructData* pRecvClient = NULL;
-	/// 获取结构体数据大小
-	long lAllStructlen = 0;
-	/// 获取数据操作类型
-	UINT nJobDataType = JDT_StructData;
-	if(nCount > 0)
-	{
-		lAllStructlen = nStructSize * nCount;
-		if(nCount > 1)
-		{
-			nJobDataType = JDT_ArrStructData;
-		}
-	}
-	/// 获取数据包大小
-	long lAllSize = 0;
-	if(nCount > 0)
-	{
-		/// 如果有数据内容
-		lAllSize = sizeof(T_RSStructData) + lAllStructlen - 1;
-	}
-	else
-	{
-		/// 如果没有数据内容
-		lAllSize = sizeof(T_RSStructData);
-	}
-	/// 获取缓冲数据
-	pRecvClient = (T_RSStructData*)new char[lAllSize];
-	/// 赋值数据包
-	pRecvClient->nClientType = m_CNetTreatment.m_nClientType;
-	pRecvClient->nJobDataType = nJobDataType;
-	pRecvClient->nSRStructType = nSSDType;
-	pRecvClient->nDataSize = nStructSize;
-	pRecvClient->nDataCount = nCount;
-	pRecvClient->nErrorCode = ECT_None;
+	T_TCPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
 	/// 赋值数据
-	if(0 < lAllStructlen)
+	sttBufferHead.nTotalLen = sizeof(T_TCPBufferHead) + unDatalen\
+		- sizeof(sttBufferHead.nTotalLen);
+	sttBufferHead.sDataType = JDT_StringData;
+	sttBufferHead.nOBJSize = unDatalen;
+	sttBufferHead.sOBJCount = 1;
+
+	if(true == e_GetNetClient->e_CreatSendTCPData(sttBufferHead,
+		(BYTE* )pszSendData, unDatalen))
 	{
-		memcpy(pRecvClient->szData, pData, lAllStructlen);
+		nRet = 1;
 	}
 	/// 发送数据
-	m_CNetTreatment.m_tSendTime = time(NULL);
-	if(false == m_CNetTreatment.e_SendStructData(nJobDataType, nSSDType, lAllSize, pRecvClient))
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_ISendTCPBinaryData(UINT unSSDType, UINT unOBJSize,
+	USHORT usOBJCount, BYTE* pSendData)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 获取数据长度
+	int nDataLen = unOBJSize * usOBJCount;
+	/// 验证数据合法性
+	if(NULL == pSendData || 0 >= nDataLen)
 	{
-		m_CNetTreatment.m_tSendTime = 0;
 		END_DEBUG_INFO
-		return 0;
+		return nRet;
+	}
+
+	T_TCPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
+	/// 赋值数据
+	sttBufferHead.nTotalLen = sizeof(T_TCPBufferHead) + nDataLen\
+		- sizeof(sttBufferHead.nTotalLen);
+	sttBufferHead.sDataType = JDT_StructData;
+	sttBufferHead.nOBJType = unSSDType;
+	sttBufferHead.nOBJSize = unOBJSize;
+	sttBufferHead.sOBJCount = usOBJCount;
+	sttBufferHead.sSNum = 1;
+	sttBufferHead.sENum = usOBJCount;
+	/// 发送数据
+	if(true == e_GetNetClient->e_CreatSendTCPData(sttBufferHead,
+		(BYTE* )pSendData, nDataLen))
+	{
+		nRet = 1;
 	}
 	END_DEBUG_INFO
-	return 1;
+	return nRet; 
+}
+
+int CNetClient::e_ISendUDPStringData(const char* pRemoteIP, USHORT usRemotePort, 
+	char* pszSendData, UINT unDatalen)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 验证数据合法性
+	if(NULL == pRemoteIP || 0 >= usRemotePort ||
+		NULL == pszSendData || 0 >= unDatalen)
+	{
+		END_DEBUG_INFO
+		return nRet;
+	}
+
+	/// 定义UDP发送数据头
+	T_UDPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+	/// 赋值数据
+	sttBufferHead.sDataType = JDT_StringData;
+	sttBufferHead.nOBJSize = unDatalen;
+	sttBufferHead.sOBJCount = 1;
+	/// 发送数据
+	if(true == e_GetNetClient->e_CreatSendUDPData(pRemoteIP, usRemotePort, sttBufferHead,
+		(BYTE* )pszSendData, unDatalen))
+	{
+		nRet = 1;
+	}
+	END_DEBUG_INFO
+	return nRet;
+}
+
+int CNetClient::e_ISendUDPBinaryData(const char* pRemoteIP, USHORT usRemotePort,
+	UINT unSSDType, UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData)
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	int nRet = 0;
+	/// 获取数据长度
+	int nDataLen = unOBJSize * usOBJCount;
+	/// 验证数据合法性
+	if(NULL == pRemoteIP || 0 >= usRemotePort ||
+		NULL == pSendData || 0 >= nDataLen)
+	{
+		END_DEBUG_INFO
+		return false;
+	}
+
+	T_UDPBufferHead sttBufferHead;
+	memset(&sttBufferHead, 0x00, sizeof(T_UDPBufferHead));
+	/// 赋值数据
+	sttBufferHead.sDataType = JDT_StructData;
+	sttBufferHead.nOBJType = unSSDType;
+	sttBufferHead.nOBJSize = unOBJSize;
+	sttBufferHead.sOBJCount = usOBJCount;
+	sttBufferHead.sSNum = 1;
+	sttBufferHead.sENum = usOBJCount;
+	/// 发送数据
+	if(true == e_GetNetClient->e_CreatSendUDPData(pRemoteIP,
+		usRemotePort, sttBufferHead, pSendData, nDataLen))
+	{
+		nRet = 1;
+	}
+	END_DEBUG_INFO
+	return nRet;
 }

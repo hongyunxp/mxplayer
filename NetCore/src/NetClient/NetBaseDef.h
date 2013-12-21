@@ -50,4 +50,34 @@
 // 接收和发送超时时间
 #define  NET_REV_SEND_TIME_OUT		10
 
+/// TCP发送数据缓冲
+typedef struct _tTCPSendBuffer
+{
+	int		nBufferSize;
+	char*	pszBuffer;
+
+	_tTCPSendBuffer()
+	{
+		nBufferSize = 0;
+		pszBuffer = NULL;
+	}
+}T_TCPSendBuffer, *LP_TCPSendBuffer;
+
+/// UDP发送数据缓冲
+typedef struct _tUDPSendBuffer
+{
+	char	szRemoteIP[16];
+	USHORT	szRemotePort;
+	int		nBufferSize;
+	char*	pszBuffer;
+
+	_tUDPSendBuffer()
+	{
+		memset(szRemoteIP, 0x00, sizeof(szRemoteIP));
+		szRemotePort = 0;
+		nBufferSize = 0;
+		pszBuffer = NULL;
+	}
+}T_UDPSendBuffer, *LP_UDPSendBuffer;
+
 #endif	/// __FWAYNET_NETCLIENTD_NETBASEDEF_H_H__

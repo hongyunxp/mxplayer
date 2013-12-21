@@ -27,72 +27,90 @@ CNetBase::CNetBase()
 	/// 初始化套接字
 	m_sClientTCPSocket = 0;
 	m_sClientUDPSocket = 0;
-	/// 初始化服务器IP
-	memset(m_szServerIP, 0x00, sizeof(m_szServerIP));
-	/// 初始化服务器端口号
-	m_usServerTCPPort = 0;
-	m_usClientUDPPort = 0;
+	/// 初始化客户端网络信息
+	m_sttInitNetClient.e_InitStruct();
 	/// 初始化线程句柄
-	m_HRecvThreadHandle = NULL;
-	m_HSendThreadHandle = NULL;
+	m_HRecvTCPThreadHandle = NULL;
+	m_HSendTCPThreadHandle = NULL;
+	m_HRecvUDPThreadHandle = NULL;
+	m_HSendUDPThreadHandle = NULL;
 	/// 初始化线程结束事件
-	m_HRecvStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_HSendStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_HRecvTCPStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_HSendTCPStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_HRecvUDPStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_HSendUDPStopEven = CreateEvent(NULL, FALSE, FALSE, NULL);
 	/// 初始化缓冲数组
-	m_SendBufferArray.clear();
+	m_SendTCPBufferArray.clear();
+	m_SendUDPBufferArray.clear();
 	/// 初始化回调函数
-	m_pfnRecDateCallBack = NULL;
+	m_pfnRecDataCallBack = NULL;
 	/// 初始化连接服务器状态
-	m_bConnect = false;
+	m_bIsTCPConnect = false;
+	m_bIsUDPCreated = false;
 	END_DEBUG_INFO
 }
 
 CNetBase::~CNetBase()
 {
 	START_DEBUG_INFO
-	/// 停止发送线程
-	e_StopReceive();
 	/// 停止接收线程
-	e_StopSend();
+	e_StopTCPReceive();
+	e_StopUDPReceive();
+	/// 停止发送线程
+	e_StopTCPSend();
+	e_StopUDPSend();
+	/// 销毁事件
+	i_CancelEvens();
 	/// 释放套接字
 	e_CloseSocket();
 	/// 清空发送的缓冲数组数据
-	i_DestroySendBufferArray();
+	i_DestroyTCPSendBufferArray();
+	i_DestroyUDPSendBufferArray();
 	END_DEBUG_INFO
 }
 
-bool CNetBase::e_ConnectServer(const char* pszServerIP, USHORT usServerPort)
+bool CNetBase::e_InitNetClient(T_InitNetClient* psttNetClient)
 {
 	START_DEBUG_INFO
 	/// 定义返回值
 	bool bRet = false;
 	/// 验证数据合法性
-	if(NULL == pszServerIP || 0 >= usServerPort)
+	if(NULL == psttNetClient)
 	{
+		END_DEBUG_INFO
 		return bRet;
 	}
-	/// 设置服务器IP
-	strncpy_s(m_szServerIP, pszServerIP, sizeof(m_szServerIP) - 1);
-	/// 设置服务端口号
-	m_usServerTCPPort = usServerPort;
+	/// 拷贝网路初始化数据
+	memcpy(&m_sttInitNetClient, psttNetClient, sizeof(T_InitNetClient));
+	bRet = true;
 	END_DEBUG_INFO
-	return e_ReconnectServer();
+	return bRet;
 }
 
-bool CNetBase::e_CreatUDPClient(USHORT usClientUDPPort)
+bool CNetBase::e_ConnectServer()
 {
 	START_DEBUG_INFO
 	/// 定义返回值
 	bool bRet = false;
-	/// 验证数据合法性
-	if(0 >= usClientUDPPort)
-	{
-		return bRet;
-	}
-	/// 赋值UDP端口号
-	m_usClientUDPPort = usClientUDPPort;
+	/// 调用连接服务器
+	bRet = e_ReconnectServer();
+	/// 启动接收和发送线程
+	bRet &= e_StartTCPReceive();
+	bRet &= e_StartTCPSend();
+	END_DEBUG_INFO
+	return bRet;
+}
+
+bool CNetBase::e_CreatUDPClient()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	bool bRet = false;
 	/// 初始化UDP套接字
 	bRet = i_InitUDPSocket();
+	/// 启动接收和发送线程
+	bRet &= e_StartUDPReceive();
+	bRet &= e_StartUDPSend();
 	END_DEBUG_INFO
 	return bRet;
 }
@@ -101,7 +119,7 @@ void CNetBase::e_SetReceiveDataCallBack(OnRecvDataCallBack pfnRecDataCallBack)
 {
 	START_DEBUG_INFO
 	/// 设置回调函数
-	m_pfnRecDateCallBack = pfnRecDataCallBack;
+	m_pfnRecDataCallBack = pfnRecDataCallBack;
 	END_DEBUG_INFO
 }
 
@@ -196,7 +214,7 @@ void CNetBase::e_CloseTCPSocket()
 	/// 套接字ID初始化为0
 	m_sClientTCPSocket = 0;
 	/// 连接状态设置为未连接
-	m_bConnect = false;
+	m_bIsTCPConnect = false;
 	END_DEBUG_INFO
 }
 
@@ -210,6 +228,8 @@ void CNetBase::e_CloseUDPSocket()
 	}
 	/// 套接字ID初始化为0
 	m_sClientUDPSocket = 0;
+	/// 赋值UDP未创建
+	m_bIsUDPCreated = false;
 	END_DEBUG_INFO
 }
 
@@ -219,16 +239,16 @@ bool CNetBase::e_ReconnectServer()
 	/// 定义返回值
 	bool bRet = false;
 	/// 检查连接状态
-	if(true == m_bConnect)
+	if(true == m_bIsTCPConnect)
 	{
 		/// 关闭套接字
 		e_CloseTCPSocket();
 	}
 	/// 清空发送缓冲数组数据
-	i_DestroySendBufferArray();
+	i_DestroyTCPSendBufferArray();
 
 	/// 连接服务Ip为空则返回
-	if(0 == strlen(m_szServerIP))
+	if(0 == strlen(m_sttInitNetClient.szTCPServerIP))
 	{
 		END_DEBUG_INFO
 		return bRet;
@@ -236,8 +256,8 @@ bool CNetBase::e_ReconnectServer()
 
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family = AF_INET;
-	serverAddress.sin_addr.s_addr = inet_addr(m_szServerIP);
-	serverAddress.sin_port = htons(m_usServerTCPPort);
+	serverAddress.sin_addr.s_addr = inet_addr(m_sttInitNetClient.szTCPServerIP);
+	serverAddress.sin_port = htons(m_sttInitNetClient.usTCPServerPort);
 	/// 如果TCP套接字无效
 	if(INVALID_SOCKET == m_sClientTCPSocket)
 	{
@@ -248,9 +268,9 @@ bool CNetBase::e_ReconnectServer()
 		}
 	}
 	/// 连接服务器并返回连接状态(-1 = 连接不成功)
-	bRet = m_bConnect = (-1 != connect(m_sClientTCPSocket, (struct sockaddr *)&serverAddress,
+	bRet = m_bIsTCPConnect = (-1 != connect(m_sClientTCPSocket, (struct sockaddr *)&serverAddress,
 		sizeof(serverAddress)));
-	if(false == m_bConnect)
+	if(false == m_bIsTCPConnect)
 	{
 		/// 连接失败，关闭套接字
 		e_CloseTCPSocket();
@@ -259,68 +279,197 @@ bool CNetBase::e_ReconnectServer()
 	return bRet;
 }
 
-bool CNetBase::e_IsConnect()
+bool CNetBase::e_IsTCPConnect()
 {
 	START_DEBUG_INFO
 	/// 返回连接状态
 	END_DEBUG_INFO
-	return m_bConnect;
+	return m_bIsTCPConnect;
 }
 
-int CNetBase::e_StartReceive()
+bool CNetBase::e_IsUDPCreated()
 {
 	START_DEBUG_INFO
-	/// 返回数据
-	int nResult = 0;
-	/// 申请接收线程
-	m_HRecvThreadHandle = CreateThread(NULL, 0, &i_ReceiveThread, this, 0, NULL);
+	/// 返回UDP创建状态
 	END_DEBUG_INFO
-	return nResult;
+	return m_bIsUDPCreated;
 }
 
-int CNetBase::e_StartSend()
+bool CNetBase::e_StartTCPReceive()
 {
 	START_DEBUG_INFO
-	int nResult = 0;
-	m_HSendThreadHandle = CreateThread(NULL, 0, &i_SendThread, this, 0, NULL);
-
+	/// 定义返回值
+	bool bRet = false;
+	/// 如果线程未启动，启动线程
+	if(NULL == m_HRecvTCPThreadHandle)
+	{
+		/// 申请接收线程
+		m_HRecvTCPThreadHandle = CreateThread(NULL, 0, &i_RecvTCPThread, this, 0, NULL);
+	}
+	/// 线程是否已启动
+	bRet = (NULL == m_HRecvTCPThreadHandle) ? false : true;
 	END_DEBUG_INFO
-	return nResult;
+	return bRet;
 }
-
-void CNetBase::e_StopReceive()
+bool CNetBase::e_StartTCPSend()
 {
 	START_DEBUG_INFO
-	WaitForMultipleObjects(1, &m_HRecvThreadHandle, TRUE, INFINITE);
-	CloseHandle(m_HRecvThreadHandle);
+	/// 定义返回值
+	bool bRet = false;
+	/// 如果线程未启动，启动线程
+	if(NULL == m_HSendTCPThreadHandle)
+	{
+		/// 申请接收线程
+		m_HSendTCPThreadHandle = CreateThread(NULL, 0, &i_RecvTCPThread, this, 0, NULL);
+	}
+	/// 线程是否已启动
+	bRet = (NULL == m_HSendTCPThreadHandle) ? false : true;
+	END_DEBUG_INFO
+	return bRet;
+}
+
+void CNetBase::e_StopTCPReceive()
+{
+	START_DEBUG_INFO
+	/// 如果TCP接收线程启动
+	if(NULL != m_HRecvTCPThreadHandle)
+	{
+		/// 设置退出事件
+		SetEvent(m_HRecvTCPStopEven);
+		WaitForSingleObject(m_HRecvTCPThreadHandle, INFINITE);
+		CloseHandle(m_HRecvTCPThreadHandle);
+		m_HRecvTCPThreadHandle = NULL;
+	}
 	END_DEBUG_INFO
 }
 
-void CNetBase::e_StopSend()
+void CNetBase::e_StopTCPSend()
 {
 	START_DEBUG_INFO
-	/// 关闭发送数据线程
-	WaitForMultipleObjects(1, &m_HSendThreadHandle, TRUE, INFINITE);
-	CloseHandle(m_HSendThreadHandle);
+	/// 如果TCP发送线程启动
+	if(NULL != m_HSendTCPThreadHandle)
+	{
+		/// 设置退出事件
+		SetEvent(m_HSendTCPStopEven);
+		WaitForSingleObject(m_HSendTCPThreadHandle, INFINITE);
+		CloseHandle(m_HSendTCPThreadHandle);
+		m_HSendTCPThreadHandle = NULL;
+	}
 	END_DEBUG_INFO
 }
 
-DWORD WINAPI CNetBase::i_ReceiveThread(void* pBaseSocket)
+bool CNetBase::e_StartUDPReceive()
 {
 	START_DEBUG_INFO
-	/// 启动接收线程
+	/// 定义返回值
+	bool bRet = false;
+	/// 如果线程未启动，启动线程
+	if(NULL == m_HRecvUDPThreadHandle)
+	{
+		/// 申请接收线程
+		m_HRecvUDPThreadHandle = CreateThread(NULL, 0, &i_RecvUDPThread, this, 0, NULL);
+	}
+	/// 线程是否已启动
+	bRet = (NULL == m_HRecvUDPThreadHandle) ? false : true;
+	END_DEBUG_INFO
+	return bRet;
+}
+
+bool CNetBase::e_StartUDPSend()
+{
+	START_DEBUG_INFO
+	/// 定义返回值
+	bool bRet = false;
+	/// 如果线程未启动，启动线程
+	if(NULL == m_HSendUDPThreadHandle)
+	{
+		/// 申请接收线程
+		m_HSendUDPThreadHandle = CreateThread(NULL, 0, &i_RecvUDPThread, this, 0, NULL);
+	}
+	/// 线程是否已启动
+	bRet = (NULL == m_HSendUDPThreadHandle) ? false : true;
+	END_DEBUG_INFO
+	return bRet;
+}
+
+void CNetBase::e_StopUDPReceive()
+{
+	START_DEBUG_INFO
+	/// 如果UDP接收线程启动
+	if(NULL != m_HRecvUDPThreadHandle)
+	{
+		/// 设置退出事件
+		SetEvent(m_HRecvUDPStopEven);
+		WaitForSingleObject(m_HRecvUDPThreadHandle, INFINITE);
+		CloseHandle(m_HRecvUDPThreadHandle);
+		m_HRecvUDPThreadHandle = NULL;
+	}
+	END_DEBUG_INFO
+}
+
+void CNetBase::e_StopUDPSend()
+{
+	START_DEBUG_INFO
+	/// 如果TCP发送线程启动
+	if(NULL != m_HSendUDPThreadHandle)
+	{
+		/// 设置退出事件
+		SetEvent(m_HSendUDPStopEven);
+		WaitForSingleObject(m_HSendUDPThreadHandle, INFINITE);
+		CloseHandle(m_HSendUDPThreadHandle);
+		m_HSendUDPThreadHandle = NULL;
+	}
+	END_DEBUG_INFO
+}
+
+DWORD WINAPI CNetBase::i_RecvTCPThread(void* pBaseSocket)
+{
+	START_DEBUG_INFO
+	/// 启动TCP接收线程
 	CNetBase* pThis = (CNetBase* )pBaseSocket;
-	pThis->e_ReceiveLoop();
+	if(NULL != pThis)
+	{
+		pThis->e_ReceiveTCPLoop();
+	}
 	END_DEBUG_INFO
 	return 0;
 }
 
-DWORD WINAPI CNetBase::i_SendThread(void* pBaseSocket)
+DWORD WINAPI CNetBase::i_SendTCPThread(void* pBaseSocket)
 {
 	START_DEBUG_INFO
-	/// 启动发送线程
+	/// 启动TCP发送线程
 	CNetBase* pThis = (CNetBase* )pBaseSocket;
-	pThis->e_SendLoop();
+	if(NULL != pThis)
+	{
+		pThis->e_SendTCPLoop();
+	}	
+	END_DEBUG_INFO
+	return 0;
+}
+
+DWORD WINAPI CNetBase::i_RecvUDPThread(void* pBaseSocket)
+{
+	START_DEBUG_INFO
+	/// 启动UDP接收线程
+	CNetBase* pThis = (CNetBase* )pBaseSocket;
+	if(NULL != pThis)
+	{
+		pThis->e_ReceiveUDPLoop();
+	}
+	END_DEBUG_INFO
+	return 0;
+}
+
+DWORD WINAPI CNetBase::i_SendUDPThread(void* pBaseSocket)
+{
+	START_DEBUG_INFO
+	/// 启动UDP发送线程
+	CNetBase* pThis = (CNetBase* )pBaseSocket;
+	if(NULL != pThis)
+	{
+		pThis->e_SendUDPLoop();
+	}	
 	END_DEBUG_INFO
 	return 0;
 }
@@ -445,31 +594,6 @@ int CNetBase::e_SelectProcess(HSOCKET sClientSocket, USHORT usMode, USHORT usPro
 	return SELECT_STATE_TIMEOUT;
 }
 
-void CNetBase::i_DestroySendBufferArray()
-{
-	START_DEBUG_INFO
-	/// 加锁发送数组缓冲
-	CAutoLock lckSendBuffer(&m_SendBufferLock);
-
-	/// 清空缓冲数组数据
-	T_BufferStruct* pBuffer = NULL;
-	for(int i = 0; i < (int)m_SendBufferArray.size(); i++)
-	{
-		pBuffer = (T_BufferStruct* )m_SendBufferArray.at(i);
-		if(NULL != pBuffer)
-		{
-			if(pBuffer->pBuf)
-			{
-				delete pBuffer->pBuf;
-			}
-			delete pBuffer;
-			pBuffer = NULL;
-		}
-	}
-	m_SendBufferArray.clear();
-	END_DEBUG_INFO
-}
-
 bool CNetBase::i_InitTCPSocket()
 {
 	START_DEBUG_INFO
@@ -501,6 +625,11 @@ bool CNetBase::i_InitUDPSocket()
 {
 	START_DEBUG_INFO
 	bool bRet = false;
+	/// 如果套接字有效关闭原有套接字
+	if(true == m_bIsUDPCreated)
+	{
+		e_CloseUDPSocket();
+	}
 	/// 创建套接字
 	m_sClientUDPSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 	if(INVALID_SOCKET == m_sClientUDPSocket)
@@ -514,6 +643,7 @@ bool CNetBase::i_InitUDPSocket()
 	int nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOpt, sizeof(int));
 	if(SOCKET_ERROR == nError)
 	{
+		e_CloseUDPSocket();
 		END_DEBUG_INFO
 		return bRet;
 	}
@@ -524,6 +654,7 @@ bool CNetBase::i_InitUDPSocket()
 	nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_RCVBUF, (char*)&nSendBufVal, sizeof(nSendBufVal));
 	if(nError == SOCKET_ERROR)
 	{
+		e_CloseUDPSocket();
 		END_DEBUG_INFO
 		return bRet;
 	}
@@ -532,13 +663,16 @@ bool CNetBase::i_InitUDPSocket()
 	nError = setsockopt(m_sClientUDPSocket, SOL_SOCKET, SO_SNDBUF, (char*)&nSendBufVal, sizeof(nSendBufVal));
 	if(nError == SOCKET_ERROR)
 	{
+		e_CloseUDPSocket();
 		END_DEBUG_INFO
 		return bRet;
 	}
 
 	ULONG nonBlock = 1;
-	if (ioctlsocket(m_sClientUDPSocket, FIONBIO, &nonBlock)) 
+	nError = ioctlsocket(m_sClientUDPSocket, FIONBIO, &nonBlock);
+	if(nError == SOCKET_ERROR)
 	{
+		e_CloseUDPSocket();
 		END_DEBUG_INFO
 		return bRet;
 	}
@@ -547,12 +681,111 @@ bool CNetBase::i_InitUDPSocket()
 	SOCKADDR_IN AddrLocal;
 	AddrLocal.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 	AddrLocal.sin_family = AF_INET;
-	AddrLocal.sin_port = htons(m_usClientUDPPort);
+	AddrLocal.sin_port = htons(m_sttInitNetClient.usLocalUDPPort);
 	nError = bind(m_sClientUDPSocket, (struct sockaddr *)&AddrLocal, sizeof(SOCKADDR_IN));
 	if(SOCKET_ERROR == nError)
 	{
+		e_CloseUDPSocket();
 		END_DEBUG_INFO
 		return bRet;
 	}
-	return true;
+
+	/// 是否加入组播
+	if(TRUE == m_sttInitNetClient.usUDPJoinGroup)
+	{
+		/// 设置该UDP组播地址
+		struct ip_mreq sIpMreqGroup;
+		/// 相当于设置组名
+		sIpMreqGroup.imr_multiaddr.s_addr = inet_addr(m_sttInitNetClient.szUDPGroupIP);
+		sIpMreqGroup.imr_interface.s_addr = htons(INADDR_ANY);
+		nError = setsockopt(m_sClientUDPSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&sIpMreqGroup, sizeof(sIpMreqGroup));
+		int nLoopBack = 0;
+		/// 取消本地回环发送
+		nError = setsockopt(m_sClientUDPSocket, IPPROTO_IP, IP_MULTICAST_LOOP, (char* )&nLoopBack, sizeof(int));
+		if(SOCKET_ERROR == nError)
+		{
+			e_CloseUDPSocket();
+			END_DEBUG_INFO
+			return bRet;
+		}
+	}
+	/// 赋值UDP创建状态
+	bRet = m_bIsUDPCreated = true;
+	return bRet;
+}
+
+void CNetBase::i_CancelEvens()
+{
+	START_DEBUG_INFO
+	if(NULL != m_HRecvTCPThreadHandle)
+	{
+		CloseHandle(m_HRecvTCPThreadHandle);
+		m_HRecvTCPThreadHandle = NULL;
+	}
+	if(NULL != m_HSendTCPThreadHandle)
+	{
+		CloseHandle(m_HSendTCPThreadHandle);
+		m_HSendTCPThreadHandle = NULL;
+	}
+	if(NULL != m_HRecvUDPThreadHandle)
+	{
+		CloseHandle(m_HRecvUDPThreadHandle);
+		m_HRecvUDPThreadHandle = NULL;
+	}
+	if(NULL != m_HSendUDPThreadHandle)
+	{
+		CloseHandle(m_HSendUDPThreadHandle);
+		m_HSendUDPThreadHandle = NULL;
+	}
+	END_DEBUG_INFO
+}
+
+void CNetBase::i_DestroyTCPSendBufferArray()
+{
+	START_DEBUG_INFO
+	/// 加锁发送数组缓冲
+	CAutoLock lckSendBuffer(&m_SendTCPBufferLock);
+	/// 清空缓冲数组数据
+	T_TCPSendBuffer* pSendBuffer = NULL;
+	for(int i = 0; i < (int)m_SendTCPBufferArray.size(); i++)
+	{
+		pSendBuffer = (T_TCPSendBuffer* )m_SendTCPBufferArray.at(i);
+		if(NULL != pSendBuffer)
+		{
+			if(NULL != pSendBuffer->pszBuffer)
+			{
+				delete pSendBuffer->pszBuffer;
+				pSendBuffer->pszBuffer = NULL;
+			}
+			delete pSendBuffer;
+			pSendBuffer = NULL;
+		}
+	}
+	m_SendTCPBufferArray.clear();
+	END_DEBUG_INFO
+}
+
+void CNetBase::i_DestroyUDPSendBufferArray()
+{
+	START_DEBUG_INFO
+	/// 加锁发送数组缓冲
+	CAutoLock lckSendBuffer(&m_SendUDPBufferLock);
+	/// 清空缓冲数组数据
+	T_UDPSendBuffer* pSendBuffer = NULL;
+	for(int i = 0; i < (int)m_SendUDPBufferArray.size(); i++)
+	{
+		pSendBuffer = (T_UDPSendBuffer* )m_SendUDPBufferArray.at(i);
+		if(NULL != pSendBuffer)
+		{
+			if(NULL != pSendBuffer->pszBuffer)
+			{
+				delete pSendBuffer->pszBuffer;
+				pSendBuffer->pszBuffer = NULL;
+			}
+			delete pSendBuffer;
+			pSendBuffer = NULL;
+		}
+	}
+	m_SendUDPBufferArray.clear();
+	END_DEBUG_INFO
 }

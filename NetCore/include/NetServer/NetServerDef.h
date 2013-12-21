@@ -104,14 +104,6 @@ typedef void (*OnDisConectionCallBack)(ULONG ulContextID, const char* pszClientI
 /// ==============================================
 typedef void (*OnPrintLog)(const char* pszfmt, ...);
 
-/// 网络传输类型
-enum _eNetTransfType
-{
-	NTT_None		= 0,	///< 未知
-	NTT_TCPData		= 1,	///< TCP数据
-	NTT_UDPData		= 2,	///< UDP数据
-};
-
 /// 网络服务类型
 enum _eNetServerNetType
 {

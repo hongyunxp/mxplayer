@@ -65,7 +65,7 @@
       <ModuleDefinitionFile>NetClient.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <ImportLibrary>../../lib/win32/$(TargetName).lib</ImportLibrary>
+      <ImportLibrary>../../lib/$(TargetName).lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -106,6 +106,7 @@
     <ClInclude Include="..\..\include\common\NetCoreDef.h" />
     <ClInclude Include="..\..\include\NetClient\NetClient.h" />
     <ClInclude Include="NetBaseDef.h" />
+    <ClInclude Include="NetBusinessDef.h" />
     <ClInclude Include="NetTreatMent.h" />
     <ClInclude Include="NetBase.h" />
     <ClInclude Include="..\..\include\common\_Debug.h" />

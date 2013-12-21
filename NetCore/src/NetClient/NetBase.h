@@ -34,26 +34,34 @@ public:
 public:
 	/// ==============================================
 	/// @par 功能 
+	/// 初始化客户端网络信息
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	[in]		psttNetClient	客户端网络信息结构体
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	bool e_InitNetClient(T_InitNetClient* psttNetClient);
+
+	/// ==============================================
+	/// @par 功能 
 	/// 连接服务器
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	/// [in]		pszServerIp		连接服务IP
-	/// [in]		usServerPort	服务端口号
 	/// @return 	bool			连接是否成功
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	bool e_ConnectServer(const char* pszServerIP, USHORT usServerPort);
+	bool e_ConnectServer();
 
 	/// ==============================================
 	/// @par 功能 
 	/// 创建UDP客户端
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	///	[in]		usClientUDPPort	UDP端口号
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	bool e_CreatUDPClient(USHORT usClientUDPPort);
+	bool e_CreatUDPClient();
 
 	/// ==============================================
 	/// @par 功能 
@@ -92,9 +100,7 @@ public:
 	/// ==============================================
 	int e_SendUDPData(const char* pszRemoteIP, USHORT usRemotePort, char* pszSendBuf, UINT nSendSize);
 
-
 protected:
-
 	/// ==============================================
 	/// @par 功能 
 	/// 重新连接服务器
@@ -108,6 +114,28 @@ protected:
 
 	/// ==============================================
 	/// @par 功能 
+	/// 验证是否连接到了服务器
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	bool			返回是否连接成功
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	bool e_IsTCPConnect();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 验证UDP客户端是否已经创建
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	bool e_IsUDPCreated();
+
+	/// ==============================================
+	/// @par 功能 
 	/// 开始接收数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
@@ -115,18 +143,7 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	int e_StartReceive();
-
-	/// ==============================================
-	/// @par 功能 
-	/// 停止接收数据
-	/// @param 
-	/// [in,out]	<参数名>		<参数说明>
-	///	-
-	/// @return 	-
-	/// @note 		Creat By li.xl 2013/12/20 
-	/// ==============================================
-	void e_StopReceive();
+	bool e_StartTCPReceive();
 
 	/// ==============================================
 	/// @par 功能 
@@ -137,7 +154,18 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	int e_StartSend();
+	bool e_StartTCPSend();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 停止接收数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	void e_StopTCPReceive();
 
 	/// ==============================================
 	/// @par 功能 
@@ -148,7 +176,7 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	void e_StopSend();
+	void e_StopTCPSend();
 
 	/// ==============================================
 	/// @par 功能 
@@ -159,7 +187,7 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	virtual void e_ReceiveLoop() = 0;
+	virtual void e_ReceiveTCPLoop() = 0;
 
 	/// ==============================================
 	/// @par 功能 
@@ -170,18 +198,73 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	virtual void e_SendLoop() = 0;
-		
+	virtual void e_SendTCPLoop() = 0;
+
 	/// ==============================================
 	/// @par 功能 
-	/// 验证是否连接到了服务器
+	/// 开始接收数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	///	-
-	/// @return 	bool			返回是否连接成功
+	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	bool e_IsConnect();
+	bool e_StartUDPReceive();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 开始发送数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	bool e_StartUDPSend();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 停止接收数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	void e_StopUDPReceive();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 停止发送线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	void e_StopUDPSend();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 接收数据线程（虚函数）
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	virtual void e_ReceiveUDPLoop() = 0;
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送数据线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	virtual void e_SendUDPLoop() = 0;
 
 	/// ==============================================
 	/// @par 功能 
@@ -258,25 +341,47 @@ protected:
 private:
 	/// ==============================================
 	/// @par 功能 
-	/// 接收数据线程
+	/// 接收TCP数据线程
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	///	[in]		pNetBase		对象参数
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	static DWORD WINAPI i_ReceiveThread(void* pNetBase);
+	static DWORD WINAPI i_RecvTCPThread(void* pNetBase);
 
 	/// ==============================================
 	/// @par 功能 
-	/// 发送数据线程
+	/// 发送TCP数据线程
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
-	////	[in]		pNetBase		对象参数
+	/// [in]		pNetBase		对象参数
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	static DWORD WINAPI i_SendThread(void* pNetBase);
+	static DWORD WINAPI i_SendTCPThread(void* pNetBase);
+
+	/// ==============================================
+	/// @par 功能 
+	/// 接收UDP数据线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		pNetBase		对象参数
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	static DWORD WINAPI i_RecvUDPThread(void* pNetBase);
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送UDP数据线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		pNetBase		对象参数
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	static DWORD WINAPI i_SendUDPThread(void* pNetBase);
 
 	/// ==============================================
 	/// @par 功能 
@@ -302,44 +407,77 @@ private:
 
 	/// ==============================================
 	/// @par 功能 
-	/// 释放发送缓冲数据
+	/// 释放事件参数
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	void i_CancelEvens();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 释放TCP发送缓冲数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	///	-
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	void i_DestroySendBufferArray();
+	void i_DestroyTCPSendBufferArray();
 
-protected:
+	/// ==============================================
+	/// @par 功能 
+	/// 释放UDP发送缓冲
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	void i_DestroyUDPSendBufferArray();
+
+private:
 	/// TCP套接字ID
 	HSOCKET					m_sClientTCPSocket;
 	/// UDP套接字
 	HSOCKET					m_sClientUDPSocket;
-	/// 服务器IP地址
-	char					m_szServerIP[16];
-	/// 服务器端口号
-	USHORT					m_usServerTCPPort;
-	/// UDP端口号
-	USHORT					m_usClientUDPPort;
-
+	/// TCP是否连接成功状态
+	bool					m_bIsTCPConnect;
+	/// UDP是否创建成功
+	bool					m_bIsUDPCreated;
 protected:
-	/// 接收数据线程句柄
-	HANDLE					m_HRecvThreadHandle;
-	/// 发送数据线程句柄
-	HANDLE					m_HSendThreadHandle;
-	/// 接收停止事件
-	HANDLE					m_HRecvStopEven;
-	/// 发送停止事件
-	HANDLE					m_HSendStopEven;
-	/// 发送缓冲锁
-	CLightCritSec			m_SendBufferLock;
+	/// 初始化网络客户端信息
+	T_InitNetClient			m_sttInitNetClient;
+	/// 接收TCP数据线程句柄
+	HANDLE					m_HRecvTCPThreadHandle;
+	/// 发送TCP数据线程句柄
+	HANDLE					m_HSendTCPThreadHandle;
+	/// 接收TCP停止事件
+	HANDLE					m_HRecvTCPStopEven;
+	/// 发送TCP停止事件
+	HANDLE					m_HSendTCPStopEven;
+
+	/// 接收UDP数据线程句柄
+	HANDLE					m_HRecvUDPThreadHandle;
+	/// 发送UDP数据线程句柄
+	HANDLE					m_HSendUDPThreadHandle;
+	/// 接收UDP停止事件
+	HANDLE					m_HRecvUDPStopEven;
+	/// 发送UDP停止事件
+	HANDLE					m_HSendUDPStopEven;
+
+	/// 发送TCP缓冲锁
+	CLightCritSec			m_SendTCPBufferLock;
 	/// 发送缓冲数组
-	CPublicPtrArray			m_SendBufferArray;
+	CPublicPtrArray			m_SendTCPBufferArray;
+	/// 发送UDP缓冲锁
+	CLightCritSec			m_SendUDPBufferLock;
+	/// 发送数据缓冲数组
+	CPublicPtrArray			m_SendUDPBufferArray;
 	/// 接收数据回调函数定义
-	OnRecvDataCallBack		m_pfnRecDateCallBack;
-	/// 是否连接成功状态
-	bool					m_bConnect;
+	OnRecvDataCallBack		m_pfnRecDataCallBack;
 };
 
 #endif	/// __FWAYNET_NETCLIENT_NETBASE_H__

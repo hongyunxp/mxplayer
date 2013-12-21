@@ -37,6 +37,14 @@ enum _eJobDataType
 	JDT_StructData,					///< 对象/结构体数据
 };
 
+/// 网络传输类型
+enum _eNetTransfType
+{
+	NTT_None		= 0,	///< 未知
+	NTT_TCPData		= 1,	///< TCP数据
+	NTT_UDPData		= 2,	///< UDP数据
+};
+
 /// TCP网络数据头结构体
 typedef struct _tTCPBufferHead
 {

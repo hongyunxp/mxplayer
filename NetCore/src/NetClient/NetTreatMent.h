@@ -30,6 +30,58 @@ public:
 	CNetTreatment();
 	~CNetTreatment();
 
+public:
+	/// ==============================================
+	/// @par 功能 
+	/// 停止TCP处理线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	void e_StopTCPProcess();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 停止UDP处理线程
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	void e_StopUDPProcess();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送数据到TCP客户端
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		sttBufferHead	TCP数据头
+	/// [in]		pSendData		发送的数据
+	/// [in]		nDataLen		数据长度
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21
+	/// ==============================================
+	bool e_CreatSendTCPData(T_TCPBufferHead& sttBufferHead,
+		BYTE* pSendData, int nDataLen);
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送数据到UDP客户端
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		pszRemoteIP		远程IP
+	///	[in]		usRemotePort	远程端口号
+	/// [in]		sttBufferHead	UDP数据头
+	/// [in]		pSendData		发送的数据
+	/// [in]		nDataLen		数据长度
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/21
+	/// ==============================================
+	bool e_CreatSendUDPData(const char* pszRemoteIP, USHORT usRemotePort,
+		T_UDPBufferHead& sttBufferHead, BYTE* pSendData, int nDataLen);
 protected:
 	/// ==============================================
 	/// @par 功能 
@@ -40,7 +92,7 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	virtual void e_SendLoop();
+	virtual void e_SendTCPLoop();
 
 	/// ==============================================
 	/// @par 功能 
@@ -51,7 +103,29 @@ protected:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/20 
 	/// ==============================================
-	virtual void e_ReceiveLoop();
+	virtual void e_ReceiveTCPLoop();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送线程处理
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	virtual void e_SendUDPLoop();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 接收线程处理
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	-
+	/// @note 		Creat By li.xl 2013/12/20 
+	/// ==============================================
+	virtual void e_ReceiveUDPLoop();
 
 private:
 	/// ==============================================
@@ -93,13 +167,14 @@ private:
 	/// @return 	-
 	/// @note 		Creat By li.xl 2013/12/21 
 	/// ==============================================
-	void i_ProcessReceivePackage(USHORT usNetType, const char* pszClientIP, 
+	bool i_ProcessReceivePackage(USHORT usNetType, const char* pszClientIP, 
 		USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount, 
 		SHORT sSNum, SHORT sENum, int nDatalen, void* pData);
 
 private:
 	/// 接收数据缓存
-	char  m_szRecvBuffer[MAX_NET_BUFFER_SIZE];
+	char  m_szTCPRecvBuffer[MAX_NET_BUFFER_SIZE + EXTRA_BUFFER_SIZE];
+	char  m_szUDPRecvBuffer[MAX_NET_BUFFER_SIZE + EXTRA_BUFFER_SIZE];
 };
 
 #endif /// __FWAYNET_NETCLIENT_NETTREATMENT_H__

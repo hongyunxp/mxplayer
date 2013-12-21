@@ -24,6 +24,7 @@
 #define __LEE_NETCLIENT_OUTINCLUDE_H__INCLUDE__
 
 #include "NetClient/NetClientDef.h"
+#include "NetBusinessDef.h"
 
 #ifdef	NETCLIENT_EXPORTS
 #define NETCLIENT_API __declspec(dllexport)
@@ -34,42 +35,32 @@
 class NETCLIENT_API CNetClient
 {
 public:
-	/// ==============================================
-	/// @par 功能 
-	/// 构造函数
-	/// @param 
-	/// [in,out]	<参数名>		<参数说明>
-	///	-
-	/// @return 	-
-	/// @note 		Creat By li.xl 2013/12/20 
-	/// ==============================================
 	CNetClient();
-
+	~CNetClient();
+public:
 	/// ==============================================
 	/// @par 功能 
-	/// 析构函数
+	/// 初始化客户端网络模块
 	/// @param 
-	/// [in,out]	<参数名>		<参数说明>
-	///	-
+	/// [in,out]	<参数名>			<参数说明>
+	///	[in]		psttInitNetClient	初始化结构体对象指针
+	/// [in]		pfnRecvDataCallBack	接收数据回调函数
 	/// @return 	-
-	/// @note 		Creat By li.xl 2013/12/20 
-	/// ==============================================]
-	~CNetClient();
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	int e_IInitNetClient(T_InitNetClient* psttInitNetClient,
+		OnRecvDataCallBack pfnRecvDataCallBack);
 
-public:
 	/// ==============================================
 	/// @par 功能 
 	/// 连接服务器(支持自动重连)
 	/// @param 
 	/// [in,out]	<参数名>			<参数说明>
-	/// [in]		pszServerIP			服务端IP
-	/// [in]		usServerPort		服务端口号
-	/// [in]		pfnRecvDataCallBack	接收数据回调事件
-	/// @return 	int						1 = 成功，小于等于0表示失败
+	/// -
+	/// @return 	int		1 = 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_ConnectionServer(char* pszServerIP, USHORT usServerPort, 
-		OnRecvDataCallBack pfnRecvDataCallBack);
+	int e_IConnectionServer();
 
 	/// ==============================================
 	/// @par 功能 
@@ -77,22 +68,44 @@ public:
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	///	-
-	/// @return 	int				1= 成功，小于等于0表示失败
+	/// @return 	int		1= 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_DisconnectServer();
+	int e_IDisconnectServer();
 
 	/// ==============================================
 	/// @par 功能 
-	/// 发送字符串数据
+	/// 创建UDP客户端
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	int		1= 成功，小于等于0表示失败
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	int e_ICreatUDPClient();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 销毁UDP客户端
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	///	-
+	/// @return 	int		1= 成功，小于等于0表示失败
+	/// @note 		Creat By li.xl 2013/12/21 
+	/// ==============================================
+	int e_IDestroyUDPClient();
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送TCP字符串数据
 	/// @param 
 	/// [in,out]	<参数名>		<参数说明>
 	/// [in]		pszSendData		字符串数据
-	/// [in]		usDatalen		字符串长度	
-	/// @return 	int				1 = 成功，小于等于0表示失败
+	/// [in]		unDatalen		字符串长度	
+	/// @return 	int		1 = 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_SendStringData(char* pszSendData, USHORT usDatalen);
+	int e_ISendTCPStringData(char* pszSendData, UINT unDatalen);
 
 	/// ==============================================
 	/// @par 功能 
@@ -103,10 +116,43 @@ public:
 	/// [in]		unOBJSize		对象/结构的大小
 	/// [in]		usOBJCount		对象/结构的个数
 	/// [in]		pSendData		要发送的数据内容
-	/// @return 	int				1 = 成功，小于等于0表示失败
+	/// @return 	int		1 = 成功，小于等于0表示失败
 	/// @note 		Creat By li.xl 2013/12/19 
 	/// ==============================================
-	int e_SendBinaryData(UINT unSSDType, UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData);
+	int e_ISendTCPBinaryData(UINT unSSDType, UINT unOBJSize,
+		USHORT usOBJCount, BYTE* pSendData);
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送UDP字符串数据
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		pszSendData		字符串数据
+	/// [in]		unDatalen		字符串长度	
+	/// @return 	int		1 = 成功，小于等于0表示失败
+	/// @note 		Creat By li.xl 2013/12/19 
+	/// ==============================================
+	int e_ISendUDPStringData(const char* pRemoteIP, USHORT usRemotePort, 
+		char* pszSendData, UINT unDatalen);
+
+	/// ==============================================
+	/// @par 功能 
+	/// 发送UDP二进制数据对象
+	/// @param 
+	/// [in,out]	<参数名>		<参数说明>
+	/// [in]		unSSDType		对象/结构的定义类型
+	/// [in]		unOBJSize		对象/结构的大小
+	/// [in]		usOBJCount		对象/结构的个数
+	/// [in]		pSendData		要发送的数据内容
+	/// @return 	int		1 = 成功，小于等于0表示失败
+	/// @note 		Creat By li.xl 2013/12/19 
+	/// ==============================================
+	int e_ISendUDPBinaryData(const char* pRemoteIP, USHORT usRemotePort, UINT unSSDType,
+		UINT unOBJSize, USHORT usOBJCount, BYTE* pSendData);
+
+private:
+	/// 客户端网络处理对象
+	void*  m_pProNetClient;
 };
 
 #endif	/// __LEE_NETCLIENT_OUTINCLUDE_H__INCLUDE__

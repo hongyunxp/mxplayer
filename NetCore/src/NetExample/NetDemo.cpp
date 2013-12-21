@@ -3,6 +3,7 @@
 
 #include "Common/CommTypes.h"
 #include "NetServer/NetServer.h"
+#include "common/NetCoreDef.h"
 
 CNetServer m_NetServer;
 
@@ -115,7 +116,7 @@ int main(int argc, char* argv[])
 	sttNetInit.usFreeBufMaxNum = 2048;
 	sttNetInit.usUDPRevcNum = 256;
 	sttNetInit.bUDPJoinGroup = true;
-	strcpy(sttNetInit.szUDPGroupIP, "239.255.0.1");
+	strncpy_s(sttNetInit.szUDPGroupIP, "239.255.0.1", sizeof(sttNetInit.szUDPGroupIP) - 1);
 	/// 启动服务
 	m_NetServer.e_IStartServer(&sttNetInit, e_OnRecvDataCallBack, e_OnSendDataCallBack,
 		e_OnConectionCallBack, e_OnDisConectionCallBack, e_PrintLog);
@@ -133,7 +134,7 @@ int main(int argc, char* argv[])
 			/// 测试大量发包
 			ULONG ulNums = 0;
 			char szData[2048];
-			/// while(0 <= ulNums)
+			while(0 <= ulNums)
 			{
 				memset(szData, 0x00, sizeof(szData));
 				snprintf(szData, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"\
@@ -145,9 +146,8 @@ int main(int argc, char* argv[])
 					"<ClientID>ec9e8bf5-b462-4af3-be51-88bbbccd5527</ClientID>\r\n"\
 					"</MANZAIVideo>\r\n", ++ulNums);
 
-				m_NetServer.e_IUDPSendStringData("239.255.0.1", 6880, szData, 2048);
-
-				/// Sleep(5);
+				m_NetServer.e_IUDPSendStringData("239.255.0.1", 6880, szData, strlen(szData));
+				Sleep(5);
 			}
 		}
 	}
