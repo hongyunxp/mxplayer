@@ -443,6 +443,8 @@ private:
 	HSOCKET					m_sClientTCPSocket;
 	/// UDP套接字
 	HSOCKET					m_sClientUDPSocket;
+	/// 发送TCP缓冲锁
+	CLightCritSec			m_CLCSConnSeverLock;
 	/// TCP是否连接成功状态
 	bool					m_bIsTCPConnect;
 	/// UDP是否创建成功

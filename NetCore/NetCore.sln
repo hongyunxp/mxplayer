@@ -10,7 +10,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetServerDemo", "src\NetSer
 		{35FAD10F-A268-4346-B48B-D5CD587306B2} = {35FAD10F-A268-4346-B48B-D5CD587306B2}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetClientDemo", "NetClientDemo\NetClientDemo.vcxproj", "{226CE337-742A-40AB-8C44-8FE93B6A24D4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NetClientDemo", "src\NetClientDemo\NetClientDemo.vcxproj", "{226CE337-742A-40AB-8C44-8FE93B6A24D4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{64013A53-096A-49E2-9E1D-F67A0865A0A8} = {64013A53-096A-49E2-9E1D-F67A0865A0A8}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

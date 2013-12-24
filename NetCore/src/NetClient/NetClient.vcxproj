@@ -103,10 +103,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\common\AutoLock.h" />
+    <ClInclude Include="..\..\include\common\NetBusinessDef.h" />
     <ClInclude Include="..\..\include\common\NetCoreDef.h" />
     <ClInclude Include="..\..\include\NetClient\NetClient.h" />
     <ClInclude Include="NetBaseDef.h" />
-    <ClInclude Include="NetBusinessDef.h" />
     <ClInclude Include="NetTreatMent.h" />
     <ClInclude Include="NetBase.h" />
     <ClInclude Include="..\..\include\common\_Debug.h" />

@@ -259,7 +259,9 @@ bool CNetBase::e_ReconnectServer()
 	serverAddress.sin_addr.s_addr = inet_addr(m_sttInitNetClient.szTCPServerIP);
 	serverAddress.sin_port = htons(m_sttInitNetClient.usTCPServerPort);
 	/// 如果TCP套接字无效
-	if(INVALID_SOCKET == m_sClientTCPSocket)
+	if(INVALID_SOCKET == m_sClientTCPSocket || 
+		SOCKET_ERROR == m_sClientUDPSocket || 
+		0 >= m_sClientTCPSocket)
 	{
 		if(false == i_InitTCPSocket())
 		{
@@ -320,7 +322,7 @@ bool CNetBase::e_StartTCPSend()
 	if(NULL == m_HSendTCPThreadHandle)
 	{
 		/// 申请接收线程
-		m_HSendTCPThreadHandle = CreateThread(NULL, 0, &i_RecvTCPThread, this, 0, NULL);
+		m_HSendTCPThreadHandle = CreateThread(NULL, 0, &i_SendTCPThread, this, 0, NULL);
 	}
 	/// 线程是否已启动
 	bRet = (NULL == m_HSendTCPThreadHandle) ? false : true;
@@ -384,7 +386,7 @@ bool CNetBase::e_StartUDPSend()
 	if(NULL == m_HSendUDPThreadHandle)
 	{
 		/// 申请接收线程
-		m_HSendUDPThreadHandle = CreateThread(NULL, 0, &i_RecvUDPThread, this, 0, NULL);
+		m_HSendUDPThreadHandle = CreateThread(NULL, 0, &i_SendUDPThread, this, 0, NULL);
 	}
 	/// 线程是否已启动
 	bRet = (NULL == m_HSendUDPThreadHandle) ? false : true;
@@ -517,7 +519,7 @@ int CNetBase::e_RecTCPData(char* pszRevBuffer, int nRevLength)
 		{
 			/// 超时
 			END_DEBUG_INFO
-			continue;
+			return nRet;
 		}
 	}
 	END_DEBUG_INFO

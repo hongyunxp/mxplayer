@@ -6,6 +6,8 @@
 #include "NetClientDemo.h"
 #include "NetClientDemoDlg.h"
 #include "afxdialogex.h"
+#include "common/CommTypes.h"
+#include "common/NetCoreDef.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,6 +54,24 @@ CNetClientDemoDlg::CNetClientDemoDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CNetClientDemoDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+
+	/// 初始化 Windows 网络模块
+	WSADATA wsData;
+	if(0 != WSAStartup(MAKEWORD(2, 2), &wsData))
+	{
+		printf("初始化sockte库错误.", GetLastError());
+	}
+
+	
+	T_InitNetClient sttNetClient;
+	strncpy_s(sttNetClient.szTCPServerIP, "127.0.0.1",
+		sizeof(sttNetClient.szTCPServerIP) - 1);
+	strncpy_s(sttNetClient.szUDPGroupIP, "239.255.0.2", 
+		sizeof(sttNetClient.szUDPGroupIP) - 1);
+	sttNetClient.usTCPServerPort = 6880;
+	sttNetClient.usLocalUDPPort = 15008;
+	sttNetClient.usUDPJoinGroup = 1;
+	m_CNetClient.e_IInitNetClient(&sttNetClient, i_OnRecvDataCallBack);
 }
 
 void CNetClientDemoDlg::DoDataExchange(CDataExchange* pDX)
@@ -67,10 +87,10 @@ BEGIN_MESSAGE_MAP(CNetClientDemoDlg, CDialogEx)
 	ON_BN_CLICKED(IDBTNDISCONN, &CNetClientDemoDlg::OnBnClickedBtndisconn)
 	ON_BN_CLICKED(IDBTNUDPCREAT, &CNetClientDemoDlg::OnBnClickedBtnudpcreat)
 	ON_BN_CLICKED(IDBTNUDPDESTORY, &CNetClientDemoDlg::OnBnClickedBtnudpdestory)
-	ON_BN_CLICKED(IDBTNCONN2, &CNetClientDemoDlg::OnBnClickedBtnconn2)
-	ON_BN_CLICKED(IDBTNCONN4, &CNetClientDemoDlg::OnBnClickedBtnconn4)
-	ON_BN_CLICKED(IDBTNCONN3, &CNetClientDemoDlg::OnBnClickedBtnconn3)
-	ON_BN_CLICKED(IDBTNCONN5, &CNetClientDemoDlg::OnBnClickedBtnconn5)
+	ON_BN_CLICKED(IDBTNCONN2, &CNetClientDemoDlg::OnBnClickedBtnSendTCPString)
+	ON_BN_CLICKED(IDBTNCONN4, &CNetClientDemoDlg::OnBnClickedBtnSendTCPBary)
+	ON_BN_CLICKED(IDBTNCONN3, &CNetClientDemoDlg::OnBnClickedBtnSendUDPString)
+	ON_BN_CLICKED(IDBTNCONN5, &CNetClientDemoDlg::OnBnClickedBtnSendUDPBary)
 END_MESSAGE_MAP()
 
 
@@ -152,6 +172,35 @@ void CNetClientDemoDlg::OnPaint()
 	}
 }
 
+void CNetClientDemoDlg::i_OnRecvDataCallBack(USHORT usNetType, const char* pszClientIP, 
+	USHORT usClientPort, SHORT sDataType, int nOBJType, SHORT sOBJCount, 
+	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
+{
+	/// 验证数据合法性
+	if(NULL == pszClientIP || 0 >= usClientPort || 0 >= nDatalen)
+	{
+		return;
+	}
+	/// 打印日志
+	TRACE("NetType = %d, ClientIP = %s, ClientPort = %d, DataType = %d, OBJType = %d, OBJCount = %d, "\
+		"SNum = %d, ENum = %d, Datalen = %d", usNetType, pszClientIP, usClientPort, sDataType, nOBJType,
+		sOBJCount, sSNum, sENum, nDatalen);
+
+	if(JDT_StringData == sDataType)
+	{
+		TRACE("String Data ---> %d", (char* )pData);
+	}
+	else
+	{
+		if(COBJT_Test == nOBJType)
+		{
+			T_TestStruct* pTestStruct = (T_TestStruct* )pData;
+			TRACE("COBJT_Test ---> Time = %s, Addr = %s, Name = %s", pTestStruct->szTime,
+				pTestStruct->szAddr, pTestStruct->szName);
+		}
+	}
+}
+
 //当用户拖动最小化窗口时系统调用此函数取得光标
 //显示。
 HCURSOR CNetClientDemoDlg::OnQueryDragIcon()
@@ -164,49 +213,69 @@ HCURSOR CNetClientDemoDlg::OnQueryDragIcon()
 void CNetClientDemoDlg::OnBnClickedBtnconn()
 {
 	// TODO: 在此添加控件通知处理程序代码
-
-
+	m_CNetClient.e_IConnectionServer();
 }
 
 
 void CNetClientDemoDlg::OnBnClickedBtndisconn()
 {
 	// TODO: 在此添加控件通知处理程序代码
-
+	m_CNetClient.e_IDisconnectServer();
 }
 
 
 void CNetClientDemoDlg::OnBnClickedBtnudpcreat()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_CNetClient.e_ICreatUDPClient();
 }
 
 
 void CNetClientDemoDlg::OnBnClickedBtnudpdestory()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_CNetClient.e_IDestroyUDPClient();
 }
 
 
-void CNetClientDemoDlg::OnBnClickedBtnconn2()
+void CNetClientDemoDlg::OnBnClickedBtnSendTCPString()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	string strSend = "Hello This Is Fway Client Sending TCP String Data.";
+
+	m_CNetClient.e_ISendTCPStringData((char* )strSend.c_str(), strSend.length());
 }
 
 
-void CNetClientDemoDlg::OnBnClickedBtnconn4()
+void CNetClientDemoDlg::OnBnClickedBtnSendTCPBary()
 {
 	// TODO: 在此添加控件通知处理程序代码
+
+	T_TestStruct sttTestStruct;
+	strncpy_s(sttTestStruct.szTime, "2013-12-12 00:00:00", sizeof(sttTestStruct.szTime) - 1);
+	strncpy_s(sttTestStruct.szName, "FWAY TCP", sizeof(sttTestStruct.szName) - 1);
+	strncpy_s(sttTestStruct.szAddr, "At Home", sizeof(sttTestStruct.szAddr) - 1);
+
+	m_CNetClient.e_ISendTCPBinaryData(COBJT_Test, sizeof(T_TestStruct), 1, (BYTE* )&sttTestStruct);
 }
 
 
-void CNetClientDemoDlg::OnBnClickedBtnconn3()
+void CNetClientDemoDlg::OnBnClickedBtnSendUDPString()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	string strSend = "Hello This Is Fway Client Sending UDP String Data.";
+	/// UDP地址发送的是组播地址
+	m_CNetClient.e_ISendUDPStringData("239.255.0.1", 6880, (char* )strSend.c_str(), strSend.length());
 }
 
 
-void CNetClientDemoDlg::OnBnClickedBtnconn5()
+void CNetClientDemoDlg::OnBnClickedBtnSendUDPBary()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	T_TestStruct sttTestStruct;
+	strncpy_s(sttTestStruct.szTime, "2013-12-12 00:00:00", sizeof(sttTestStruct.szTime) - 1);
+	strncpy_s(sttTestStruct.szName, "FWAY UDP", sizeof(sttTestStruct.szName) - 1);
+	strncpy_s(sttTestStruct.szAddr, "At Home", sizeof(sttTestStruct.szAddr) - 1);
+
+	m_CNetClient.e_ISendUDPBinaryData("239.255.0.1", 6880, COBJT_Test, sizeof(T_TestStruct), 1, (BYTE* )&sttTestStruct);
 }

@@ -24,7 +24,7 @@
 #define __LEE_NETCLIENT_OUTINCLUDE_H__INCLUDE__
 
 #include "NetClient/NetClientDef.h"
-#include "NetBusinessDef.h"
+#include "common/NetBusinessDef.h"
 
 #ifdef	NETCLIENT_EXPORTS
 #define NETCLIENT_API __declspec(dllexport)

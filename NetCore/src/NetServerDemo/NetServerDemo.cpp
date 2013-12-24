@@ -4,14 +4,9 @@
 #include "Common/CommTypes.h"
 #include "NetServer/NetServer.h"
 #include "common/NetCoreDef.h"
+#include "common/NetBusinessDef.h"
 
 CNetServer m_NetServer;
-
-typedef struct _tTestStruct
-{
-	USHORT	usSize;
-	char	szText[1024 * 7];
-}T_TestStruct, *LP_TestStruct;
 
 static void e_PrintLog(const char* pszfmt, ...)
 {

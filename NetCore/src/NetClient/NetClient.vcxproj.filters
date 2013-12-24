@@ -55,8 +55,8 @@
     <ClInclude Include="..\..\include\common\AutoLock.h">
       <Filter>Comm</Filter>
     </ClInclude>
-    <ClInclude Include="NetBusinessDef.h">
-      <Filter>NetClient</Filter>
+    <ClInclude Include="..\..\include\common\NetBusinessDef.h">
+      <Filter>Comm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
