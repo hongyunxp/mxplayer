@@ -170,7 +170,8 @@ int CNetBase::e_SendUDPData(const char* pszRemoteIP, USHORT usRemotePort,
 	/// 定义返回值
 	int nRet = -1;
 	/// 验证数据数据合法性
-	if(NULL == pszRemoteIP || 0 >= usRemotePort || NULL != pszSendBuf || 0 >= nSendSize)
+	if(NULL == pszRemoteIP || 0 >= usRemotePort ||
+		NULL == pszSendBuf || 0 >= nSendSize)
 	{
 		return nRet;
 	}
@@ -518,8 +519,7 @@ int CNetBase::e_RecTCPData(char* pszRevBuffer, int nRevLength)
 		else
 		{
 			/// 超时
-			END_DEBUG_INFO
-			return nRet;
+			break;
 		}
 	}
 	END_DEBUG_INFO

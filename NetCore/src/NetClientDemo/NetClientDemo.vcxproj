@@ -102,7 +102,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="ReadMe.txt" />
     <None Include="res\NetClientDemo.ico" />
     <None Include="res\NetClientDemo.rc2" />
   </ItemGroup>

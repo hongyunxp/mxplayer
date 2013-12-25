@@ -202,10 +202,9 @@ void CNetTreatment::i_ProcessTCPRecData()
 	/// 获取数据长度
 	nReadCount = e_RecTCPData((char* )&nDataLen, sizeof(UINT));
 	/// 没有读取到数据，或者有效长度错误
-	if(-1 == nReadCount || nDataLen < sizeof(T_TCPBufferHead) - sizeof(INT) ||
-		nDataLen > MAX_PAL_BUFFER_SIZE)
+	if(-1 == nReadCount)
 	{
-		printf("NetClient Read TCP Data Len Error, ReadCount = %d, DataLen = %d .\r\n",
+		printf("NetClient Read TCP Data Count Error, ReadCount = %d, DataLen = %d .\r\n",
 			nReadCount, nDataLen);
 		/// 断开连接
 		e_CloseTCPSocket();
@@ -216,6 +215,16 @@ void CNetTreatment::i_ProcessTCPRecData()
 	/// 正确读取到了数据长度
 	if(0 < nDataLen)
 	{
+		if(nDataLen < sizeof(T_TCPBufferHead) - sizeof(INT) ||
+			nDataLen > MAX_PAL_BUFFER_SIZE)
+		{
+			printf("NetClient Read TCP Data Len Error, ReadCount = %d, DataLen = %d .\r\n",
+				nReadCount, nDataLen);
+			/// 断开连接
+			e_CloseTCPSocket();
+			END_DEBUG_INFO
+		}
+
 		/// 重置接收数据变量
 		memset(m_szTCPRecvBuffer, 0x00, sizeof(MAX_NET_BUFFER_SIZE));
 		/// 接收数据长度
@@ -241,7 +250,7 @@ void CNetTreatment::i_ProcessTCPRecData()
 		memset(&sttBufferHead, 0x00, sizeof(T_TCPBufferHead));
 		memcpy(&sttBufferHead, m_szTCPRecvBuffer, sizeof(T_TCPBufferHead));
 		/// = 提取数据部分
-		int nDataSize = nDataLen - sizeof(T_TCPBufferHead);
+		int nDataSize = nDataLen - (sizeof(T_TCPBufferHead) - sizeof(INT));
 		memmove(m_szTCPRecvBuffer, m_szTCPRecvBuffer + sizeof(T_TCPBufferHead), nDataSize);
 		memset(m_szTCPRecvBuffer + nDataLen, 0x00, sizeof(T_TCPBufferHead));
 		/// 处理收到完整数据包
@@ -332,7 +341,7 @@ bool CNetTreatment::e_CreatSendTCPData(T_TCPBufferHead& sttBufferHead,
 	/// 定义返回值
 	bool bRet = false;
 	/// 验证数据合法性, 如果未连接服务器不发送数据
-	if(NULL != pSendData || 0 >= nDataLen || nDataLen > \
+	if(NULL == pSendData || 0 >= nDataLen || nDataLen > \
 		MAX_NET_BUFFER_SIZE - sizeof(T_TCPBufferHead) || 
 		false == e_IsTCPConnect())
 	{
@@ -376,8 +385,8 @@ bool CNetTreatment::e_CreatSendUDPData(const char* pszRemoteIP, USHORT usRemoteP
 	/// 定义返回值
 	bool bRet = false;
 	/// 验证数据合法性, 如果UDP客户端未创建，创建客户端
-	if(NULL != pszRemoteIP || 0 >= usRemotePort || 
-		NULL != pSendData || 0 >= nDataLen || 
+	if(NULL == pszRemoteIP || 0 >= usRemotePort || 
+		NULL == pSendData || 0 >= nDataLen || 
 		false == e_IsUDPCreated())
 	{
 		END_DEBUG_INFO

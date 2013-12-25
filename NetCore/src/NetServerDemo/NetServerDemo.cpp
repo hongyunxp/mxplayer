@@ -27,15 +27,21 @@ static void e_OnRecvDataCallBack(USHORT usNetType, ULONG ulContextID, const char
 	SHORT sSNum, SHORT sENum, int nDatalen, void* pData)
 {
 	START_DEBUG_INFO;
-	/// 收到TCP数据
-	if(NTT_TCPData == usNetType)
+	/// 收到字符串数据
+	if(JDT_StringData == sDataType)
 	{
+		e_PrintLog("收到 [%s] 数据，ClientIP = %s, ClientPort = %d， ClientString: \r\n%s\r\n", 
+			(NTT_TCPData == usNetType) ? "TCP" : "UDP",
+			pszClientIP, usClientPort, (char* )pData);
 
+		string strTemp = "This Is FWAY Net Server.";
+
+		m_NetServer.e_ITCPSendStringData(ulContextID, (char* )strTemp.c_str(), strTemp.length());
 	}
-	/// 收到UDP数据
-	else if(NTT_UDPData == usNetType)
+	else
 	{
-		e_PrintLog("收到UDP数据，ClientIP = %s, ClientPort = %d\r\n",
+		e_PrintLog("收到二进制 [%s] 数据，ClientIP = %s, ClientPort = %d，\r\n", 
+			(NTT_TCPData == usNetType) ? "TCP" : "UDP",
 			pszClientIP, usClientPort);
 	}
 	END_DEBUG_INFO;

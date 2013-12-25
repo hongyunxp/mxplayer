@@ -188,14 +188,14 @@ void CNetClientDemoDlg::i_OnRecvDataCallBack(USHORT usNetType, const char* pszCl
 
 	if(JDT_StringData == sDataType)
 	{
-		TRACE("String Data ---> %d", (char* )pData);
+		TRACE("收到, String Data ---> %s\r\n", (char* )pData);
 	}
 	else
 	{
 		if(COBJT_Test == nOBJType)
 		{
 			T_TestStruct* pTestStruct = (T_TestStruct* )pData;
-			TRACE("COBJT_Test ---> Time = %s, Addr = %s, Name = %s", pTestStruct->szTime,
+			TRACE("COBJT_Test ---> Time = %s, Addr = %s, Name = %s\r\n", pTestStruct->szTime,
 				pTestStruct->szAddr, pTestStruct->szName);
 		}
 	}
@@ -265,7 +265,7 @@ void CNetClientDemoDlg::OnBnClickedBtnSendUDPString()
 	// TODO: 在此添加控件通知处理程序代码
 	string strSend = "Hello This Is Fway Client Sending UDP String Data.";
 	/// UDP地址发送的是组播地址
-	m_CNetClient.e_ISendUDPStringData("239.255.0.1", 6880, (char* )strSend.c_str(), strSend.length());
+	m_CNetClient.e_ISendUDPStringData("127.0.0.1", 6880, (char* )strSend.c_str(), strSend.length());
 }
 
 

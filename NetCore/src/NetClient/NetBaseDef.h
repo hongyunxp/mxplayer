@@ -48,7 +48,7 @@
 #define SELECT_STATE_TIMEOUT       3
 
 // 接收和发送超时时间
-#define  NET_REV_SEND_TIME_OUT		1
+#define  NET_REV_SEND_TIME_OUT		2
 
 /// TCP发送数据缓冲
 typedef struct _tTCPSendBuffer
