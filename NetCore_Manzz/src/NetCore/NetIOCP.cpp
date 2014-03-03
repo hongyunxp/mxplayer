@@ -404,6 +404,16 @@ bool CNetIOCP::i_RunUDPService()
 		sIpMreqGroup.imr_multiaddr.s_addr = inet_addr(m_sttNetInitStruct.szUDPGroupIP);
 		sIpMreqGroup.imr_interface.s_addr = htons(INADDR_ANY);
 		nErrorCode = setsockopt(m_sUDPServerSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&sIpMreqGroup, sizeof(sIpMreqGroup));
+
+		/*
+		/// 相当于设置组名
+		sIpMreqGroup.imr_multiaddr.s_addr = inet_addr(m_sttNetInitStruct.szUDPGroupIP);
+		/// 绑定组播接收IP接口
+		sIpMreqGroup.imr_interface.s_addr = inet_addr("192.168.1.103");//htons(INADDR_ANY);
+		/// 绑定组播发送IP接口
+		struct in_addr SendAddress;
+		SendAddress.s_addr = inet_addr("192.168.1.103");
+		setsockopt(m_sUDPServerSocket, IPPROTO_IP, IP_MULTICAST_IF, (char* )&SendAddress, sizeof(SendAddress));*/
 		/// int nLoopBack = 0;
 		/// 取消本地回环发送
 		/// setsockopt(m_sUDPServerSocket, IPPROTO_IP, IP_MULTICAST_LOOP, (char* )&nLoopBack, sizeof(int));
@@ -545,7 +555,7 @@ bool CNetIOCP::i_AssIncomClientWithContext(SOCKET sClientSocket)
 			return bRet;
 		}
 
-		/// 根据套接字创建对应完成端口
+		/// 根据套接字绑定连接对象到完成端口
 		HANDLE hHandle = CreateIoCompletionPort((HANDLE)pContextStruct->sSocketID, m_hCompletionPort, (ULONG)pContextStruct, 0);
 		if(hHandle != m_hCompletionPort)
 		{
@@ -904,15 +914,30 @@ bool CNetIOCP::i_ProcessIOMessage(T_ClientContext* pClientContext, CNetBuffer* p
 void CNetIOCP::i_OnTCPAccept(T_ClientContext* pClientContext, CNetBuffer* pNetBuffer, int nDataLen)
 {
 	START_DEBUG_INFO
+	/// 验证数据合法性
+	if(NULL == pClientContext)
+	{
+		/// 释放连接缓冲
+		m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
+		END_DEBUG_INFO
+		return;
+	}
 	/// 处理新连接
 	e_NotifyClientConntext(pClientContext);
+	/// 定义临时连接对象
+	T_ClientContext* psttClientTemp = NULL;
 	/// 投递接收数据IO操作到完成端口
 	for(int i = 0; i < m_sttNetInitStruct.usPendReadsNum; i++)
 	{
-		/// 获取连接计数，投递接收消息到完成端口
-		i_AIOProcess(m_ContextManager.e_GetConntext(pClientContext->ulContextID), IOPT_TCPRECV);
+		psttClientTemp = m_ContextManager.e_GetConntext(pClientContext->ulContextID);
+		/// 验证是否是正确连接对象
+		if(NULL != psttClientTemp)
+		{
+			/// 获取连接计数，投递接收消息到完成端口
+			i_AIOProcess(psttClientTemp, IOPT_TCPRECV);
+		}
 	}
-	/// 释放一个连接计数
+	/// 释放连接对象
 	m_ContextManager.e_ReleaseConntext(pClientContext);
 	/// 释放连接缓冲对象
 	m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
@@ -1450,6 +1475,18 @@ bool CNetIOCP::i_AIOProcess(T_ClientContext* pClientContext, USHORT usIOType, CN
 	{
 		m_CBufferManager.e_AllocateBuffer(pNetBuffer, usIOType);
 	}
+	/// 验证数据合法性
+	if(NULL == pClientContext)
+	{
+		/// 如果缓冲数据不为空，释放缓冲
+		if(NULL != pNetBuffer)
+		{
+			m_CBufferManager.e_ReleaseBuffer(pNetBuffer);
+		}
+		/// 直接返回
+		return bRet;
+	}
+	/// 验证数据合法性
 	if(NULL != pNetBuffer)
 	{
 		bRet = true;
